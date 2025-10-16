@@ -1,0 +1,18 @@
+MeCab-ipadic辞書データ使用許諾
+
+本アプリで使用している辞書データは、MeCab-ipadic辞書から抽出したものです。
+
+MeCab-ipadic辞書のライセンス:
+- 修正BSDライセンス
+- 商用利用可能
+- 改変可能
+- 再配布可能
+
+著作権表示:
+Copyright (C) 2000-2003 Nippon Telegraph and Telephone Corporation
+Copyright (C) 2000-2005 ATR Adaptive Communications Research Laboratories
+Copyright (C) 2000-2005 CRL Advanced Telecommunications Research Institute International
+Copyright (C) 2000-2005 Nara Institute of Science and Technology
+
+本アプリでは、MeCab-ipadic辞書から名詞を抽出し、
+しりとりゲーム用に最適化した辞書データとして使用しています。

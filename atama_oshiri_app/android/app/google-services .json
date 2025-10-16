@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "643242705219",
+    "project_id": "atama-oshiri-app",
+    "storage_bucket": "atama-oshiri-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:643242705219:android:be4fc44ded67cfef9e6ff6",
+        "android_client_info": {
+          "package_name": "co.jp.b19.atama_oshiri_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAKWnzIak6uTk0WHUDhTxfVd68tTTLME0I"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:643242705219:android:cfc177de585351b99e6ff6",
+        "android_client_info": {
+          "package_name": "co.jp.b19.atamaoshiriapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAKWnzIak6uTk0WHUDhTxfVd68tTTLME0I"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
