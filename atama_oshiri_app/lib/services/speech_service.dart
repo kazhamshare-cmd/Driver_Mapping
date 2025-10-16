@@ -263,9 +263,19 @@ class SpeechService {
       }
       
       // 6. 伸ばし棒が不適切に変換されていないかチェック
-      if (text.contains('ー') && result.contains('あいうえお'.split('').any((vowel) => result.contains(vowel) && !text.contains(vowel)))) {
-        print('⚠️ 伸ばし棒の不適切な変換を検出、元のテキストを使用');
-        return text; // 元のテキストを返す
+      if (text.contains('ー')) {
+        final vowels = ['あ', 'い', 'う', 'え', 'お'];
+        bool hasInappropriateConversion = false;
+        for (String vowel in vowels) {
+          if (result.contains(vowel) && !text.contains(vowel)) {
+            hasInappropriateConversion = true;
+            break;
+          }
+        }
+        if (hasInappropriateConversion) {
+          print('⚠️ 伸ばし棒の不適切な変換を検出、元のテキストを使用');
+          return text; // 元のテキストを返す
+        }
       }
       
       print('✅ ひらがな変換完了: "$text" → "$result"');
