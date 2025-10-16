@@ -226,11 +226,12 @@ class _SoloGameScreenState extends State<SoloGameScreen> {
       final elapsedTime = 8.0 - _answerSeconds;
       print('🎤 音声認識が停止しました（経過時間: ${elapsedTime.toStringAsFixed(1)}秒、残り: ${_answerSeconds.toStringAsFixed(1)}秒）');
 
-      // 音声認識結果が空の場合のフォールバック
+      // 音声認識結果が空の場合は再開を試行
       if (_recognizedText.isEmpty) {
-        print('📱 音声認識結果が空のため、フォールバック機能を試行します');
-        // フォールバック機能を呼び出し（期待される尻文字も渡す）
-        _enableSimulatorFallback(expectedTail: _currentChallenge.tail);
+        print('📱 音声認識結果が空です。音声認識を再開します');
+        if (_answerSeconds > 1.0) {
+          _restartListening();
+        }
         return;
       }
 
@@ -275,6 +276,10 @@ class _SoloGameScreenState extends State<SoloGameScreen> {
     setState(() {
       _isListening = false;
     });
+    
+    // 音声認識結果をリセット
+    _recognizedText = '';
+    _intermediateText = '';
     
     // 少し待ってから再開
     await Future.delayed(const Duration(milliseconds: 500));
