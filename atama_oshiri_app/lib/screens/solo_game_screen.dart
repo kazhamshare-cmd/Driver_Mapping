@@ -56,6 +56,7 @@ class _SoloGameScreenState extends State<SoloGameScreen> {
   // 音声認識
   bool _isListening = false;
   String _recognizedText = '';
+  String _intermediateText = '';
   List<String> _speechAlternatives = [];
 
   // 広告
