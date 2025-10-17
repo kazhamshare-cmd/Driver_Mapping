@@ -236,13 +236,9 @@ class _SoloGameScreenState extends State<SoloGameScreen> {
         return;
       }
 
-      if (_answerSeconds > 1.0) {
-        // まだ時間が残っている場合は再起動（最低1秒以上）
-        print('⚠️ タイマーがまだ残っているため、音声認識を再開します');
-        _restartListening();
-      } else {
-        print('⚠️ 残り時間が少ないため、音声認識の再開をスキップします');
-      }
+      // 音声認識が成功した場合は再開しない
+      print('✅ 音声認識が成功しました。再開処理をスキップします');
+      return;
     };
 
     // 音声認識開始
