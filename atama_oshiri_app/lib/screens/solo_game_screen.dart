@@ -236,9 +236,13 @@ class _SoloGameScreenState extends State<SoloGameScreen> {
         return;
       }
 
-      // 音声認識が成功した場合は再開しない
-      print('✅ 音声認識が成功しました。再開処理をスキップします');
-      return;
+      // 音声認識が成功した場合でも、まだ時間が残っていれば言い直しを許可
+      if (_answerSeconds > 1.0) {
+        print('✅ 音声認識が成功しました。言い直しのため音声認識を再開します');
+        _restartListening();
+      } else {
+        print('✅ 音声認識が成功しました。残り時間が少ないため再開をスキップします');
+      }
     };
 
     // 音声認識開始
@@ -274,9 +278,9 @@ class _SoloGameScreenState extends State<SoloGameScreen> {
       _isListening = false;
     });
     
-    // 音声認識結果をリセット
-    _recognizedText = '';
-    _intermediateText = '';
+    // 言い直しの場合は結果をリセットしない（新しい結果が前の結果を上書きする）
+    // _recognizedText = '';
+    // _intermediateText = '';
     
     // 少し待ってから再開
     await Future.delayed(const Duration(milliseconds: 500));
