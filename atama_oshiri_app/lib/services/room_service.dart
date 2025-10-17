@@ -13,6 +13,48 @@ class RoomService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   static const String _roomsCollection = 'rooms';
 
+  /// ルームの有効性をチェック
+  bool _isValidRoom(Room room) {
+    // 基本的な有効性チェック
+    if (room.id.isEmpty || room.name.isEmpty || room.hostName.isEmpty) {
+      return false;
+    }
+    
+    // プレイヤーが存在するかチェック
+    if (room.players.isEmpty) {
+      return false;
+    }
+    
+    // ホストが存在するかチェック
+    final hasHost = room.players.any((player) => player.isHost);
+    if (!hasHost) {
+      return false;
+    }
+    
+    // 作成日時が有効かチェック（24時間以内）
+    final now = DateTime.now();
+    final hoursSinceCreation = now.difference(room.createdAt).inHours;
+    if (hoursSinceCreation > 24) {
+      return false;
+    }
+    
+    return true;
+  }
+
+  /// 無効なルームを削除
+  Future<void> _deleteInvalidRoom(String roomId) async {
+    try {
+      await _firestore.collection(_roomsCollection).doc(roomId).delete();
+      if (kDebugMode) {
+        print('無効なルームを削除しました: $roomId');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('無効なルーム削除エラー: $e');
+      }
+    }
+  }
+
   /// ルーム作成
   Future<Room> createRoom(CreateRoomRequest request) async {
     try {
@@ -106,9 +148,36 @@ class RoomService {
         .orderBy('createdAt', descending: true)
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs
-          .map((doc) => Room.fromMap(doc.data()))
-          .toList();
+      final rooms = <Room>[];
+      
+      for (final doc in snapshot.docs) {
+        try {
+          // ドキュメントが存在し、有効なデータかチェック
+          if (doc.exists && doc.data().isNotEmpty) {
+            final room = Room.fromMap(doc.data());
+            
+            // ルームの有効性をチェック
+            if (_isValidRoom(room)) {
+              rooms.add(room);
+            } else {
+              // 無効なルームは削除
+              _deleteInvalidRoom(doc.id);
+            }
+          }
+        } catch (e) {
+          // パースエラーの場合はルームを削除
+          if (kDebugMode) {
+            print('無効なルームを削除: ${doc.id}, エラー: $e');
+          }
+          _deleteInvalidRoom(doc.id);
+        }
+      }
+      
+      if (kDebugMode) {
+        print('有効なルーム数: ${rooms.length}');
+      }
+      
+      return rooms;
     });
   }
 
@@ -173,13 +242,28 @@ class RoomService {
       if (!roomDoc.exists) return;
 
       final room = Room.fromMap(roomDoc.data()!);
+      final leavingPlayer = room.players.firstWhere(
+        (p) => p.id == playerId,
+        orElse: () => throw Exception('プレイヤーが見つかりません'),
+      );
+
       final updatedRoom = room.removePlayer(playerId);
 
       if (updatedRoom.players.isEmpty) {
         // プレイヤーが0人になったらルーム削除
         await deleteRoom(roomId);
+        if (kDebugMode) {
+          print('ルーム削除: プレイヤーが0人になりました');
+        }
+      } else if (leavingPlayer.isHost) {
+        // ホストが退出した場合、新しいホストを選出
+        final newHostRoom = updatedRoom.changeHost();
+        await updateRoom(newHostRoom);
+        if (kDebugMode) {
+          print('ホスト変更: 新しいホストが選出されました');
+        }
       } else {
-        // ルーム更新
+        // 通常のプレイヤー退出
         await updateRoom(updatedRoom);
       }
 

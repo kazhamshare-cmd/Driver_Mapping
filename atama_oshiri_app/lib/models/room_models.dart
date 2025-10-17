@@ -160,6 +160,33 @@ class Room {
 
   /// プレイヤー数
   int get playerCount => players.length;
+
+  /// ホスト変更（最初のプレイヤーを新しいホストにする）
+  Room changeHost() {
+    if (players.isEmpty) return this;
+    
+    final newPlayers = players.map((player) {
+      return Player(
+        id: player.id,
+        name: player.name,
+        isHost: player == players.first, // 最初のプレイヤーをホストに
+        joinedAt: player.joinedAt,
+        status: player.status,
+      );
+    }).toList();
+
+    return Room(
+      id: id,
+      name: name,
+      hostName: newPlayers.first.name,
+      password: password,
+      createdAt: createdAt,
+      updatedAt: DateTime.now(),
+      players: newPlayers,
+      status: status,
+      maxPlayers: maxPlayers,
+    );
+  }
 }
 
 /// プレイヤー情報

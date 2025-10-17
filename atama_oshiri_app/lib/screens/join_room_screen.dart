@@ -59,10 +59,22 @@ class _JoinRoomScreenState extends State<JoinRoomScreen> {
       }
     } catch (e) {
       if (mounted) {
+        String errorMessage = 'ルーム参加に失敗しました';
+        
+        if (e.toString().contains('ルームが見つかりません') || 
+            e.toString().contains('Room not found')) {
+          errorMessage = 'ルームが存在しません。\nルームが削除された可能性があります。';
+        } else if (e.toString().contains('プレイヤー数が上限に達しています')) {
+          errorMessage = 'ルームが満員です。\n他のルームを選択してください。';
+        } else if (e.toString().contains('パスワードが間違っています')) {
+          errorMessage = 'パスワードが間違っています。\n正しいパスワードを入力してください。';
+        }
+        
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('ルーム参加に失敗しました: $e'),
+            content: Text(errorMessage),
             backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
           ),
         );
       }

@@ -601,13 +601,13 @@ class _SoloGameScreenState extends State<SoloGameScreen> {
               if (_player.wordCount > 0)
                 Text('平均点: ${(_score / _player.wordCount).toStringAsFixed(1)}点'),
 
-              // 不正解時の解答例表示
+              // 不正解時の解答例表示（ランダム10個）
               if (_answerExamples.isNotEmpty) ...[
                 const SizedBox(height: 24),
                 const Divider(),
                 const SizedBox(height: 16),
                 Text(
-                  '正しい解答例',
+                  '正しい解答例（ランダム10個）',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -619,7 +619,7 @@ class _SoloGameScreenState extends State<SoloGameScreen> {
                   spacing: 8,
                   runSpacing: 8,
                   alignment: WrapAlignment.center,
-                  children: _answerExamples.map((word) {
+                  children: _getRandomAnswerExamples(10).map((word) {
                     return Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
@@ -692,6 +692,15 @@ class _SoloGameScreenState extends State<SoloGameScreen> {
         ],
       ),
     );
+  }
+
+  /// ランダムな解答例を取得
+  List<String> _getRandomAnswerExamples(int count) {
+    if (_answerExamples.isEmpty) return [];
+    
+    final List<String> shuffled = List.from(_answerExamples);
+    shuffled.shuffle();
+    return shuffled.take(count).toList();
   }
 
   @override
@@ -1417,20 +1426,25 @@ class _SoloGameScreenState extends State<SoloGameScreen> {
   Widget _buildResultState() {
     return Column(
       children: [
-        // 正誤表示
-        Icon(
-          _isCorrect ? Icons.check_circle : Icons.cancel,
-          size: 120,
-          color: _isCorrect ? Colors.green : Colors.red,
-        ),
-        const SizedBox(height: 24),
-        Text(
-          _feedbackMessage,
-          style: TextStyle(
-            fontSize: 32,
-            fontWeight: FontWeight.bold,
-            color: _isCorrect ? Colors.green : Colors.red,
-          ),
+        // 正誤表示（横並び）
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              _isCorrect ? Icons.check_circle : Icons.cancel,
+              size: 32,
+              color: _isCorrect ? Colors.green : Colors.red,
+            ),
+            const SizedBox(width: 12),
+            Text(
+              _feedbackMessage,
+              style: TextStyle(
+                fontSize: 32,
+                fontWeight: FontWeight.bold,
+                color: _isCorrect ? Colors.green : Colors.red,
+              ),
+            ),
+          ],
         ),
         if (_recognizedText.isNotEmpty) ...[
           const SizedBox(height: 24),

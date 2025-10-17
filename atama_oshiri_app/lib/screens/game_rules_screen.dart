@@ -127,6 +127,30 @@ class GameRulesScreen extends StatelessWidget {
 
                   const SizedBox(height: 24),
 
+                  // 数字に関するルール
+                  _RuleSection(
+                    title: '🔢 数字に関するルール',
+                    children: [
+                      _RuleItem(
+                        icon: '🚫',
+                        text: '数字を含む単語は基本的に使用不可',
+                        examples: ['「3位」「3月」「三重の塔」「3歳」「三角形」「3代目」など'],
+                      ),
+                      _RuleItem(
+                        icon: '✅',
+                        text: '熟語や固有名詞は使用可能',
+                        examples: ['「三位一体」「3代目ジェイソール」など'],
+                      ),
+                      _RuleItem(
+                        icon: '💡',
+                        text: '数字が含まれていても意味のある熟語は有効',
+                        examples: ['「三日月」「四角形」「五重塔」など'],
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 24),
+
                   // 得点システム
                   _RuleSection(
                     title: '🏆 得点システム',

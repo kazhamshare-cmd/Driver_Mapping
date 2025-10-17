@@ -58,6 +58,7 @@ class _OfflineGameScreenState extends State<OfflineGameScreen> with TickerProvid
   // 音声認識状態
   bool _isListening = false;
   String _recognizedText = '';
+  String _intermediateText = '';
 
   // 判定結果
   bool _isCorrect = false;
@@ -109,13 +110,9 @@ class _OfflineGameScreenState extends State<OfflineGameScreen> with TickerProvid
         print('🎤 音声認識停止');
 
         // 音声認識が早期に停止した場合、再開する（タイマーがまだ残っている場合）
-        if (_gameState == GameState.answering && _answerSeconds > 0.5) {
+        if (_gameState == GameState.answering && _answerSeconds > 3.0) {
           print('⚠️ 音声認識が早期停止 - 再開します (残り時間: ${_answerSeconds.toStringAsFixed(1)}秒)');
-          Future.delayed(const Duration(milliseconds: 100), () {
-            if (mounted && _gameState == GameState.answering) {
-              _speech.startListening();
-            }
-          });
+          _restartListening();
         }
       }
     };
@@ -258,7 +255,8 @@ class _OfflineGameScreenState extends State<OfflineGameScreen> with TickerProvid
     });
 
     // 音声認識を開始（ソロプレイと同じ設定）
-    await _speech.startListening(timeout: const Duration(seconds: 8));
+    // 遅延を減らすため、awaitを削除
+    _speech.startListening(timeout: const Duration(seconds: 8));
 
     const double incrementPerTick = 1 / 80; // 8秒 = 80 * 0.1秒
     _answerTimer = Timer.periodic(const Duration(milliseconds: 100), (timer) {
@@ -290,6 +288,40 @@ class _OfflineGameScreenState extends State<OfflineGameScreen> with TickerProvid
         });
       }
     });
+  }
+
+  /// 音声認識を再開する
+  Future<void> _restartListening() async {
+    if (_gameState != GameState.answering) return;
+    
+    // 残り時間が短すぎる場合は再開しない
+    if (_answerSeconds <= 2.5) {
+      print('⚠️ 残り時間が短すぎるため再開をスキップします (残り時間: ${_answerSeconds.toStringAsFixed(1)}秒)');
+      return;
+    }
+    
+    print('🔄 音声認識を再開します');
+    
+    // 音声認識を停止
+    await _speech.stopListening();
+    
+    // 音声認識結果はリセットしない（言い直しを保持）
+    // setState(() {
+    //   _recognizedText = '';
+    //   _intermediateText = '';
+    // });
+    
+    // 少し待ってから再開
+    await Future.delayed(const Duration(milliseconds: 500));
+    
+    if (mounted && _gameState == GameState.answering && _answerSeconds > 2.5) {
+      // 残り時間を計算
+      final remainingSeconds = _answerSeconds.ceil().clamp(2, 8);
+      print('🎤 音声認識を再開します（残り時間: ${remainingSeconds}秒）');
+      
+      // 音声認識を再開
+      _speech.startListening(timeout: Duration(seconds: remainingSeconds));
+    }
   }
 
   void _judgeAnswer() async {
@@ -1572,8 +1604,8 @@ class _OfflineGameScreenState extends State<OfflineGameScreen> with TickerProvid
       ),
     );
 
-    // 2秒後に自動的にダイアログを閉じて次の処理へ
-    Future.delayed(const Duration(seconds: 2), () {
+    // 5秒後に自動的にダイアログを閉じて次の処理へ
+    Future.delayed(const Duration(seconds: 5), () {
       if (mounted) {
         Navigator.pop(context);
 

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'menu_screen.dart';
 
 /// スプラッシュ画面 - 起動時に「株式会社ビーク」を表示
@@ -21,6 +22,9 @@ class _SplashScreenState extends State<SplashScreen>
   late Animation<double> _fadeAnimation;
   bool _isInitialized = false;
   bool _animationComplete = false;
+  double _loadingProgress = 0.0;
+  String _loadingStatus = '初期化中...';
+  String _appVersion = '';
 
   @override
   void initState() {
@@ -43,14 +47,44 @@ class _SplashScreenState extends State<SplashScreen>
     // アニメーション開始
     _controller.forward();
 
+    // アプリバージョンを取得
+    _getAppVersion();
+
     // 初期化処理とナビゲーションを実行
     _initializeAndNavigate();
+  }
+
+  Future<void> _getAppVersion() async {
+    try {
+      final packageInfo = await PackageInfo.fromPlatform();
+      setState(() {
+        _appVersion = 'v${packageInfo.version}';
+      });
+    } catch (e) {
+      print('⚠️ バージョン取得エラー: $e');
+      setState(() {
+        _appVersion = 'v1.0.0';
+      });
+    }
   }
 
   Future<void> _initializeAndNavigate() async {
     try {
       // 初期化を開始
       print('🚀 スプラッシュ: 初期化開始');
+      
+      // 進捗を段階的に更新
+      _updateProgress(0.1, 'Firebase初期化中...');
+      await Future.delayed(const Duration(milliseconds: 200));
+      
+      _updateProgress(0.2, '認証サービス初期化中...');
+      await Future.delayed(const Duration(milliseconds: 200));
+      
+      _updateProgress(0.3, '音声認識サービス初期化中...');
+      await Future.delayed(const Duration(milliseconds: 200));
+      
+      _updateProgress(0.4, '辞書データベース読み込み中...');
+      await Future.delayed(const Duration(milliseconds: 300));
 
       // 初期化とアニメーション時間を並行実行
       final results = await Future.wait([
@@ -66,6 +100,7 @@ class _SplashScreenState extends State<SplashScreen>
         return [null, null];
       });
 
+      _updateProgress(1.0, '初期化完了');
       print('✅ スプラッシュ: 初期化完了');
 
       if (!mounted) {
@@ -116,6 +151,15 @@ class _SplashScreenState extends State<SplashScreen>
     }
   }
 
+  void _updateProgress(double progress, String status) {
+    if (mounted) {
+      setState(() {
+        _loadingProgress = progress;
+        _loadingStatus = status;
+      });
+    }
+  }
+
   @override
   void dispose() {
     _controller.dispose();
@@ -152,6 +196,72 @@ class _SplashScreenState extends State<SplashScreen>
                     letterSpacing: 2.0,
                   ),
                 ),
+                const SizedBox(height: 40),
+                
+                // 読み込み進捗バー
+                Container(
+                  width: 280,
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      // 読み込みステータス
+                      Text(
+                        _loadingStatus,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey.shade700,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      
+                      // プログレスバー
+                      LinearProgressIndicator(
+                        value: _loadingProgress,
+                        backgroundColor: Colors.grey.shade300,
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          Colors.deepPurple.shade400,
+                        ),
+                        minHeight: 8,
+                      ),
+                      const SizedBox(height: 12),
+                      
+                      // 進捗パーセンテージ
+                      Text(
+                        '${(_loadingProgress * 100).toInt()}%',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                
+                const SizedBox(height: 20),
+                
+                // アプリバージョン
+                if (_appVersion.isNotEmpty)
+                  Text(
+                    _appVersion,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w400,
+                      color: Colors.grey.shade500,
+                    ),
+                  ),
               ],
             ),
           ),

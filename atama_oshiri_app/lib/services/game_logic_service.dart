@@ -56,8 +56,32 @@ class GameLogicService {
       attempts++;
     }
 
-    // フォールバック: 無効なお題でも返す
-    print('⚠️ 有効なお題が見つからなかったため、ランダムなお題を返します');
+    // フォールバック: 最低限の解答例があるお題を探す
+    print('⚠️ 10個以上の解答例があるお題が見つからなかったため、最低限の解答例があるお題を探します');
+    
+    // より緩い条件でお題を探す（5個以上の解答例）
+    for (int i = 0; i < 100; i++) {
+      final head = _hiraganaList[_random.nextInt(_hiraganaList.length)];
+      final tail = _hiraganaList[_random.nextInt(_hiraganaList.length)];
+      final challengeKey = '${head}_${tail}';
+      final challenge = Challenge(head: head, tail: tail);
+      
+      // 直近のお題と重複しないかチェック
+      if (!_recentChallenges.contains(challengeKey)) {
+        final examples = generateAnswerExamples(challenge, limit: 5);
+        if (examples.length >= 5) {
+          _recentChallenges.add(challengeKey);
+          if (_recentChallenges.length > maxRecentChallenges) {
+            _recentChallenges.removeAt(0);
+          }
+          print('🎲 フォールバックお題を生成: 頭=$head, お尻=$tail (解答数: ${examples.length})');
+          return challenge;
+        }
+      }
+    }
+    
+    // 最終フォールバック: 最低限の条件でも見つからない場合は強制的に返す
+    print('🚨 最低限の条件でもお題が見つからなかったため、強制的にお題を返します');
     final head = _hiraganaList[_random.nextInt(_hiraganaList.length)];
     final tail = _hiraganaList[_random.nextInt(_hiraganaList.length)];
     return Challenge(head: head, tail: tail);

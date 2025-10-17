@@ -22,6 +22,16 @@ enum GameStatus {
   finished,   // 終了
 }
 
+/// ゲーム画面の状態
+enum GameState {
+  ready,              // 準備中
+  waitingForOpponent, // 相手待ち
+  answering,          // 回答中
+  judging,            // 判定中
+  showResult,         // 結果表示
+  gameOver,           // ゲーム終了
+}
+
 /// お題（頭とお尻の文字）
 class Challenge {
   final String head;  // 頭の文字

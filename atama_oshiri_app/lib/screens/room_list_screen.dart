@@ -143,6 +143,7 @@ class _RoomListScreenState extends State<RoomListScreen> {
                         stream: _roomService.getRooms(),
                         builder: (context, snapshot) {
                           if (snapshot.hasError) {
+                            print('ルーム一覧取得エラー: ${snapshot.error}');
                             return Center(
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
@@ -153,21 +154,37 @@ class _RoomListScreenState extends State<RoomListScreen> {
                                     size: 48,
                                   ),
                                   const SizedBox(height: 16),
-                                  Text(
+                                  const Text(
                                     'エラーが発生しました',
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 18,
                                       color: Colors.white,
                                     ),
                                   ),
                                   const SizedBox(height: 8),
                                   Text(
-                                    snapshot.error.toString(),
+                                    'ルーム一覧の取得に失敗しました。\nしばらく待ってから再試行してください。',
                                     style: const TextStyle(
                                       fontSize: 14,
                                       color: Colors.white70,
                                     ),
                                     textAlign: TextAlign.center,
+                                  ),
+                                  const SizedBox(height: 16),
+                                  ElevatedButton(
+                                    onPressed: () {
+                                      setState(() {
+                                        _isLoading = true;
+                                      });
+                                      Future.delayed(const Duration(seconds: 1), () {
+                                        if (mounted) {
+                                          setState(() {
+                                            _isLoading = false;
+                                          });
+                                        }
+                                      });
+                                    },
+                                    child: const Text('再試行'),
                                   ),
                                 ],
                               ),

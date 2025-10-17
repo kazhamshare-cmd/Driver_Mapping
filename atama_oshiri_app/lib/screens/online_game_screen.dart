@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/room_models.dart';
 import '../services/room_service.dart';
+import 'online_game_play_screen.dart';
 
 /// オンライン対戦画面
 class OnlineGameScreen extends StatefulWidget {
@@ -508,12 +509,36 @@ class _OnlineGameScreenState extends State<OnlineGameScreen> {
   bool _isHost(Room room) {
     // 現在のユーザーがホストかどうかを判定
     // 実際の実装では、ユーザーIDやセッション管理が必要
-    return true; // 仮実装
+    // 仮実装: 最初のプレイヤーがホストと仮定
+    if (room.players.isEmpty) return false;
+    return room.players.first.isHost;
   }
 
   Future<void> _startGame(Room room) async {
     try {
       await _roomService.startRoom(room.id);
+      
+      // ゲーム開始成功時の画面遷移
+      if (mounted) {
+        // 実際のゲーム画面に遷移
+        // ここでは仮実装として、ルーム画面を更新
+        setState(() {});
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('ゲームを開始しました！'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        
+        // 実際のゲーム画面への遷移
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => OnlineGamePlayScreen(room: room),
+          ),
+        );
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
