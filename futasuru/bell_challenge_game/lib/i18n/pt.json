@@ -1,0 +1,100 @@
+{
+  "app": {
+    "title": "Jogo do Desafio do Sino"
+  },
+  "settings": {
+    "title": "Configurações",
+    "language": "Idioma",
+    "difficulty": "Dificuldade",
+    "difficultyDescription": "Selecione a dificuldade do jogo",
+    "winCondition": "Condição de Vitória",
+    "wins": "{count} vitórias",
+    "audio": "Configurações de Áudio",
+    "bgm": "BGM",
+    "soundEffects": "Efeitos Sonoros",
+    "bgmVolume": "Volume BGM",
+    "seVolume": "Volume SE",
+    "soundTest": "Teste de Som",
+    "other": "Outras Configurações",
+    "vibration": "Vibração",
+    "startGame": "Iniciar Jogo",
+    "startGameSubtext": "{difficulty} ({time}s) - Primeiro a {wins}",
+    "back": "Voltar",
+    "preview": "Prévia",
+    "previewText": "Prévia de {time}s"
+  },
+  "difficulty": {
+    "slow": {
+      "name": "Lento",
+      "description": "Vá com calma e divirta-se",
+      "recommendedFor": "Para crianças e iniciantes"
+    },
+    "normal": {
+      "name": "Normal",
+      "description": "Dificuldade bem equilibrada",
+      "recommendedFor": "Para jogadores em geral"
+    },
+    "fast": {
+      "name": "Rápido",
+      "description": "Testa julgamento instantâneo",
+      "recommendedFor": "Para jogadores experientes"
+    },
+    "ultra": {
+      "name": "Ultra Rápido",
+      "description": "Modo super rápido para especialistas",
+      "recommendedFor": "Para jogadores especialistas"
+    }
+  },
+  "soundTestButtons": {
+    "click": "Clique",
+    "buzzer": "Buzina",
+    "victory": "Vitória",
+    "safe": "Seguro"
+  },
+  "tutorial": {
+    "title": "Tutorial",
+    "subtitle": "Aprenda como jogar",
+    "skip": "Pular",
+    "back": "Voltar",
+    "next": "Próximo",
+    "complete": "Concluir",
+    "page1": {
+      "title": "Bem-vindo ao Jogo do Desafio do Sino!",
+      "description": "Treine seus reflexos com este jogo dinâmico!\nToque e deslize no momento certo para vencer."
+    },
+    "page2": {
+      "title": "Gaiola do Animal - Zona Segura",
+      "description": "Quando a gaiola do animal aparecer no círculo verde:\n• Toque = OK (Pontuação)\n• Deslize verticalmente = Enviar sino para o oponente"
+    },
+    "page3": {
+      "title": "Sino - Zona de Perigo",
+      "description": "Quando o sino aparecer no círculo vermelho:\n• Toque = NG (Perder ponto)\n• Deslize verticalmente = OK (Pontuação)\n• Deslize horizontalmente = Voltar para a gaiola"
+    },
+    "page4": {
+      "title": "Divirta-se com o Jogo!",
+      "description": "Ajuste a dificuldade e condições de vitória nas configurações.\nNão esqueça de configurar áudio e vibração!"
+    }
+  },
+  "game": {
+    "countdown": "Contagem regressiva",
+    "ready": "Pronto...",
+    "go": "Vai!",
+    "timeUp": "Tempo esgotado!",
+    "correct": "Correto!",
+    "wrong": "Errado!",
+    "bellTapped": "Você tocou o sino!",
+    "correctSwipe": "Deslize correto!",
+    "score": "Pontuação: {player1} - {player2}",
+    "winner": "{player} Venceu!",
+    "nextRound": "Próxima Rodada",
+    "gameEnd": "Fim de Jogo",
+    "backToSettings": "Voltar às Configurações",
+    "youWin": "You Win!",
+    "youLose": "You Lose!",
+    "playerLose": "{player} LOSE",
+    "instructions": {
+      "petCage": "Gaiola: Toque=OK, Deslize vertical=Enviar sino",
+      "bell": "Sino: Toque=NG, Deslize vertical=OK, Deslize horizontal=Voltar"
+    }
+  }
+}

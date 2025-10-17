@@ -1,0 +1,100 @@
+{
+  "app": {
+    "title": "铃铛挑战游戏"
+  },
+  "settings": {
+    "title": "设置",
+    "language": "语言",
+    "difficulty": "难度",
+    "difficultyDescription": "选择游戏难度",
+    "winCondition": "胜利条件",
+    "wins": "{count} 胜",
+    "audio": "音频设置",
+    "bgm": "背景音乐",
+    "soundEffects": "音效",
+    "bgmVolume": "背景音乐音量",
+    "seVolume": "音效音量",
+    "soundTest": "音效测试",
+    "other": "其他设置",
+    "vibration": "振动",
+    "startGame": "开始游戏",
+    "startGameSubtext": "{difficulty} ({time}秒) - 先到 {wins}",
+    "back": "返回",
+    "preview": "预览",
+    "previewText": "{time}秒预览"
+  },
+  "difficulty": {
+    "slow": {
+      "name": "慢速",
+      "description": "慢慢来，享受游戏",
+      "recommendedFor": "适合儿童和初学者"
+    },
+    "normal": {
+      "name": "普通",
+      "description": "平衡的难度",
+      "recommendedFor": "适合一般玩家"
+    },
+    "fast": {
+      "name": "快速",
+      "description": "测试瞬间判断",
+      "recommendedFor": "适合有经验的玩家"
+    },
+    "ultra": {
+      "name": "超快",
+      "description": "专家级超快模式",
+      "recommendedFor": "适合专家玩家"
+    }
+  },
+  "soundTestButtons": {
+    "click": "点击",
+    "buzzer": "蜂鸣器",
+    "victory": "胜利",
+    "safe": "安全"
+  },
+  "tutorial": {
+    "title": "教程",
+    "subtitle": "学习如何游戏",
+    "skip": "跳过",
+    "back": "返回",
+    "next": "下一个",
+    "complete": "完成",
+    "page1": {
+      "title": "欢迎来到铃铛挑战游戏！",
+      "description": "用这个快节奏游戏训练你的反应！\n在正确的时间点击和滑动来获胜。"
+    },
+    "page2": {
+      "title": "宠物笼子 - 安全区",
+      "description": "当宠物笼子出现在绿色圆圈中时：\n• 点击 = OK（得分）\n• 垂直滑动 = 向对手发送铃铛"
+    },
+    "page3": {
+      "title": "铃铛 - 危险区",
+      "description": "当铃铛出现在红色圆圈中时：\n• 点击 = NG（失分）\n• 垂直滑动 = OK（得分）\n• 水平滑动 = 返回宠物笼子"
+    },
+    "page4": {
+      "title": "享受游戏！",
+      "description": "在设置中调整难度和胜利条件。\n别忘了配置音频和振动！"
+    }
+  },
+  "game": {
+    "countdown": "倒计时",
+    "ready": "准备...",
+    "go": "开始！",
+    "timeUp": "时间到！",
+    "correct": "正确！",
+    "wrong": "错误！",
+    "bellTapped": "你点击了铃铛！",
+    "correctSwipe": "正确滑动！",
+    "score": "分数：{player1} - {player2}",
+    "winner": "{player} 获胜！",
+    "nextRound": "下一轮",
+    "gameEnd": "游戏结束",
+    "backToSettings": "返回设置",
+    "youWin": "You Win!",
+    "youLose": "You Lose!",
+    "playerLose": "{player} LOSE",
+    "instructions": {
+      "petCage": "宠物笼子：点击=OK，垂直滑动=发送铃铛",
+      "bell": "铃铛：点击=NG，垂直滑动=OK，水平滑动=返回"
+    }
+  }
+}

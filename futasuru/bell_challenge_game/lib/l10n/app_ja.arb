@@ -1,0 +1,23 @@
+{
+  "@@locale": "ja",
+  "appTitle": "ベルチャレンジゲーム",
+  "@appTitle": {
+    "description": "The title of the application"
+  },
+  "startGame": "ゲーム開始",
+  "@startGame": {
+    "description": "Button text to start the game"
+  },
+  "tutorial": "チュートリアル",
+  "@tutorial": {
+    "description": "Tutorial button text"
+  },
+  "settings": "設定",
+  "@settings": {
+    "description": "Settings button text"
+  },
+  "online": "オンライン",
+  "@online": {
+    "description": "Online multiplayer button text"
+  }
+}

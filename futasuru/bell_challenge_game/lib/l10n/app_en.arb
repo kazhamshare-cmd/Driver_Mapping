@@ -1,0 +1,23 @@
+{
+  "@@locale": "en",
+  "appTitle": "Bell Challenge Game",
+  "@appTitle": {
+    "description": "The title of the application"
+  },
+  "startGame": "Start Game",
+  "@startGame": {
+    "description": "Button text to start the game"
+  },
+  "tutorial": "Tutorial",
+  "@tutorial": {
+    "description": "Tutorial button text"
+  },
+  "settings": "Settings",
+  "@settings": {
+    "description": "Settings button text"
+  },
+  "online": "Online",
+  "@online": {
+    "description": "Online multiplayer button text"
+  }
+}
