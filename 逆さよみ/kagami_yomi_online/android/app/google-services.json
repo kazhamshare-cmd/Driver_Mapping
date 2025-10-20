@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "793591960853",
+    "project_id": "kagami-yomi-online",
+    "storage_bucket": "kagami-yomi-online.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:793591960853:android:ebab3d8ed4e94338e5051c",
+        "android_client_info": {
+          "package_name": "com.beek.kagamiYomiOnline"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCp5GQGesmRpW2zOwefKjOVwTkAjjb8vtg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:793591960853:android:b85b545f3a789b78e5051c",
+        "android_client_info": {
+          "package_name": "com.beek.kagami_yomi_online"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCp5GQGesmRpW2zOwefKjOVwTkAjjb8vtg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

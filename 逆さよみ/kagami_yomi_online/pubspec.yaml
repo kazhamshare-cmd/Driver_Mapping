@@ -1,0 +1,111 @@
+name: kagami_yomi_online
+description: "鏡文字の逆読みONLINE - Mirror Text Reading Game"
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.9.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+
+  # Firebase
+  firebase_core: ^3.8.1
+  cloud_firestore: ^5.5.0
+  firebase_auth: ^5.3.3
+
+  # AdMob
+  google_mobile_ads: ^5.2.0
+
+  # State Management
+  provider: ^6.1.2
+
+  # Local Storage
+  shared_preferences: ^2.3.3
+
+  # Audio
+  audioplayers: ^6.1.0
+
+  # Vibration
+  vibration: ^2.0.0
+
+  # UUID for generating unique IDs
+  uuid: ^4.5.1
+
+  # Date formatting
+  intl: ^0.19.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^5.0.0
+
+  # Splash screen generator
+  flutter_native_splash: ^2.4.3
+
+  # Icon generator
+  flutter_launcher_icons: ^0.14.2
+
+# For information on the generic Dart part of this file, see the
+# following page: https://dart.dev/tools/pub/pubspec
+
+# The following section is specific to Flutter packages.
+flutter:
+
+  uses-material-design: true
+
+  assets:
+    - assets/sounds/
+    - assets/images/
+    # - assets/icon/app_icon.png  # アイコンファイル作成後にコメント解除
+
+# アプリアイコン設定（アイコンファイル作成後に有効化）
+# flutter_launcher_icons:
+#   android: true
+#   ios: true
+#   image_path: "assets/icon/app_icon.png"
+#   min_sdk_android: 24
+#   remove_alpha_ios: true
+#   background_color: "#FFFFFF"
+
+# スプラッシュスクリーン設定
+flutter_native_splash:
+  color: "#FFFFFF"
+  android: true
+  ios: true
+  web: false
+
+  # テキストのみのスプラッシュ
+  android_12:
+    color: "#FFFFFF"
+
+  # 会社名を表示
+  # 実際にはカスタムウィジェットで実装
+
+  # For details regarding adding assets from package dependencies, see
+  # https://flutter.dev/to/asset-from-package
+
+  # To add custom fonts to your application, add a fonts section here,
+  # in this "flutter" section. Each entry in this list should have a
+  # "family" key with the font family name, and a "fonts" key with a
+  # list giving the asset and other descriptors for the font. For
+  # example:
+  # fonts:
+  #   - family: Schyler
+  #     fonts:
+  #       - asset: fonts/Schyler-Regular.ttf
+  #       - asset: fonts/Schyler-Italic.ttf
+  #         style: italic
+  #   - family: Trajan Pro
+  #     fonts:
+  #       - asset: fonts/TrajanPro.ttf
+  #       - asset: fonts/TrajanPro_Bold.ttf
+  #         weight: 700
+  #
+  # For details regarding fonts from package dependencies,
+  # see https://flutter.dev/to/font-from-package

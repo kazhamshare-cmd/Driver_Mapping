@@ -113,6 +113,7 @@ class QuestionService {
   ];
 
   // レベル5: 簡単な漢字2文字（ひらがな読みで逆読み）
+  // 重複文字を含む問題は除外
   final List<Map<String, String>> _level5Questions = [
     {'kanji': '学校', 'reading': 'がっこう'},
     {'kanji': '公園', 'reading': 'こうえん'},
@@ -120,15 +121,12 @@ class QuestionService {
     {'kanji': '電車', 'reading': 'でんしゃ'},
     {'kanji': '飛行機', 'reading': 'ひこうき'},
     {'kanji': '図書館', 'reading': 'としょかん'},
-    {'kanji': '郵便局', 'reading': 'ゆうびんきょく'},
     {'kanji': '動物', 'reading': 'どうぶつ'},
     {'kanji': '植物', 'reading': 'しょくぶつ'},
     {'kanji': '天気', 'reading': 'てんき'},
     {'kanji': '太陽', 'reading': 'たいよう'},
     {'kanji': '地球', 'reading': 'ちきゅう'},
-    {'kanji': '宇宙', 'reading': 'うちゅう'},
     {'kanji': '教室', 'reading': 'きょうしつ'},
-    {'kanji': '先生', 'reading': 'せんせい'},
     {'kanji': '友達', 'reading': 'ともだち'},
     {'kanji': '家族', 'reading': 'かぞく'},
     {'kanji': '会社', 'reading': 'かいしゃ'},
@@ -142,42 +140,17 @@ class QuestionService {
     {'kanji': '定規', 'reading': 'じょうぎ'},
     {'kanji': '机', 'reading': 'つくえ'},
     {'kanji': '椅子', 'reading': 'いす'},
+    {'kanji': '教科書', 'reading': 'きょうかしょ'},
+    {'kanji': '音楽', 'reading': 'おんがく'},
+    {'kanji': '体育', 'reading': 'たいく'},
   ];
 
-  // レベル6: 簡単な漢字3文字以上（ひらがな読みで逆読み）
-  final List<Map<String, String>> _level6Questions = [
-    {'kanji': '小学校', 'reading': 'しょうがっこう'},
-    {'kanji': '中学校', 'reading': 'ちゅうがっこう'},
-    {'kanji': '高校', 'reading': 'こうこう'},
-    {'kanji': '大学', 'reading': 'だいがく'},
-    {'kanji': '美術館', 'reading': 'びじゅつかん'},
-    {'kanji': '博物館', 'reading': 'はくぶつかん'},
-    {'kanji': '遊園地', 'reading': 'ゆうえんち'},
-    {'kanji': '動物園', 'reading': 'どうぶつえん'},
-    {'kanji': '水族館', 'reading': 'すいぞくかん'},
-    {'kanji': '映画館', 'reading': 'えいがかん'},
-    {'kanji': '体育館', 'reading': 'たいいくかん'},
-    {'kanji': '音楽室', 'reading': 'おんがくしつ'},
-    {'kanji': '保健室', 'reading': 'ほけんしつ'},
-    {'kanji': '運動場', 'reading': 'うんどうじょう'},
-    {'kanji': '新幹線', 'reading': 'しんかんせん'},
-    {'kanji': '自動車', 'reading': 'じどうしゃ'},
-    {'kanji': '自転車', 'reading': 'じてんしゃ'},
-    {'kanji': '消防車', 'reading': 'しょうぼうしゃ'},
-    {'kanji': '救急車', 'reading': 'きゅうきゅうしゃ'},
-    {'kanji': '郵便局', 'reading': 'ゆうびんきょく'},
-    {'kanji': '警察署', 'reading': 'けいさつしょ'},
-  ];
 
-  // ランダムに問題を取得（レベル1-3のひらがな問題のみ）
+  // ランダムに問題を取得（全レベル1-5からランダム）
   Question getRandomQuestion() {
-    final allHiraganaQuestions = [
-      ..._level1Questions,
-      ..._level2Questions,
-      ..._level3Questions,
-    ];
-    final word = allHiraganaQuestions[_random.nextInt(allHiraganaQuestions.length)];
-    return _createQuestion(word);
+    // レベル1-5からランダムにレベルを選択
+    final level = _random.nextInt(5) + 1; // 1-5
+    return getQuestionByLevel(level);
   }
 
   // 問題を複数取得（レベル1-3のひらがな問題のみ）
@@ -248,9 +221,6 @@ class QuestionService {
       case 5:
         final kanjiData = _level5Questions[_random.nextInt(_level5Questions.length)];
         return _createKanjiQuestion(kanjiData);
-      case 6:
-        final kanjiData = _level6Questions[_random.nextInt(_level6Questions.length)];
-        return _createKanjiQuestion(kanjiData);
       default:
         final word = _level1Questions[_random.nextInt(_level1Questions.length)];
         return _createQuestion(word);
@@ -270,12 +240,40 @@ class QuestionService {
       level = 3; // ステージ6-8: レベル3（5文字ひらがな）
     } else if (stage < 12) {
       level = 4; // ステージ9-11: レベル4（漢字1文字）
-    } else if (stage < 15) {
-      level = 5; // ステージ12-14: レベル5（漢字2文字）
     } else {
-      level = 6; // ステージ15以上: レベル6（漢字3文字）
+      level = 5; // ステージ12以上: レベル5（漢字2文字）
     }
 
     return getQuestionByLevel(level);
+  }
+
+  // テキストから問題を取得（オンラインゲーム用）
+  // ホストが生成した問題文字列から再構築
+  Question? getQuestionByText(String text) {
+    // 反転されているので元に戻す
+    final originalText = text.split('').reversed.join('');
+
+    // 漢字が含まれているかチェック
+    final hasKanji = RegExp(r'[\u4E00-\u9FFF]').hasMatch(originalText);
+
+    if (hasKanji) {
+      // 漢字問題の場合、レベル4-5から検索
+      final allKanjiQuestions = [
+        ..._level4Questions,
+        ..._level5Questions,
+      ];
+
+      for (final kanjiData in allKanjiQuestions) {
+        if (kanjiData['kanji'] == originalText) {
+          return _createKanjiQuestion(kanjiData);
+        }
+      }
+
+      // 見つからない場合はnullを返す
+      return null;
+    } else {
+      // ひらがな問題の場合
+      return _createQuestion(originalText);
+    }
   }
 }
