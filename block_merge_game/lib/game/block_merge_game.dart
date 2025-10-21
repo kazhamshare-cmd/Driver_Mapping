@@ -56,7 +56,8 @@ class BlockMergeGame extends Forge2DGame with TapCallbacks, DragCallbacks, Conta
   int remainingBalls = 0; // 残りボール数
   int targetBalls = 10; // 目標ボール数（これ以下でクリア）
   int currentStage = 1; // 現在のステージ
-  double allStoppedTimer = 0; // 全ボール停止時間
+  double timeSinceLastShot = 0; // 最後にボールを発射してからの時間
+  bool hasGravityBoosted = false; // この発射で既に重力ブーストしたか
   bool isGravityBoostActive = false; // 重力ブースト中か
   bool isStageClear = false; // ステージクリアフラグ
 
@@ -356,6 +357,13 @@ class BlockMergeGame extends Forge2DGame with TapCallbacks, DragCallbacks, Conta
     bottomSpawnBalls.remove(ball);
 
     print('💨 ボールフリック発射: ${ball.blockColor.name}, 速度: ${adjustedVelocity.length.toStringAsFixed(1)} (倍率: ${speedMultiplier.toStringAsFixed(2)}x)');
+
+    // ビリヤードモード：発射タイマーをリセット
+    if (isBilliardMode) {
+      timeSinceLastShot = 0;
+      hasGravityBoosted = false;
+      print('⏱️ タイマーリセット: 次の5秒カウント開始');
+    }
 
     // 発射後、即座に新しいボールを補充（最小数を維持）
     _maintainMinimumSpawnBalls();
@@ -1205,25 +1213,22 @@ class BlockMergeGame extends Forge2DGame with TapCallbacks, DragCallbacks, Conta
       return;
     }
 
+    // 最後の発射からの時間を更新
+    timeSinceLastShot += dt;
+
+    // 5秒経過で重力ブースト（1回の発射につき1回まで）
+    if (timeSinceLastShot >= 5.0 && !hasGravityBoosted && !isGravityBoostActive) {
+      _triggerGravityBoost();
+      hasGravityBoosted = true; // この発射では2度と発動しない
+      print('⏱️ 5秒経過: 重力ブースト発動（1回限り）');
+    }
+
     // 全ボールが停止しているかチェック
     bool allStopped = _areAllBallsStopped();
 
-    if (allStopped) {
-      allStoppedTimer += dt;
-
-      // 5秒間停止したら上向き重力トリガー
-      if (allStoppedTimer >= 5.0 && !isGravityBoostActive) {
-        _triggerGravityBoost();
-      }
-
-      // 停止していて、スポーンボールがなければ新しいボールをスポーン
-      if (bottomSpawnBalls.isEmpty && !isGravityBoostActive) {
-        _spawnNewBall();
-      }
-    } else {
-      // 動いているボールがある場合はタイマーをリセット
-      allStoppedTimer = 0;
-      isGravityBoostActive = false;
+    // 停止していて、スポーンボールがなければ新しいボールをスポーン
+    if (allStopped && bottomSpawnBalls.isEmpty && !isGravityBoostActive) {
+      _spawnNewBall();
     }
 
     // 移動中の接合判定（ビリヤードモード専用）
@@ -1310,6 +1315,9 @@ class BlockMergeGame extends Forge2DGame with TapCallbacks, DragCallbacks, Conta
     if (targetBalls < 3) targetBalls = 3; // 最低3個
     isStageClear = false;
     bottomSpawnBalls.clear();
+    timeSinceLastShot = 0;
+    hasGravityBoosted = false;
+    isGravityBoostActive = false;
 
     // UIを更新
     stageText?.text = 'Stage: $currentStage';
@@ -1356,7 +1364,6 @@ class BlockMergeGame extends Forge2DGame with TapCallbacks, DragCallbacks, Conta
     // 3秒後にブースト終了
     Future.delayed(const Duration(seconds: 3), () {
       isGravityBoostActive = false;
-      allStoppedTimer = 0;
     });
   }
 
@@ -1589,7 +1596,8 @@ class BlockMergeGame extends Forge2DGame with TapCallbacks, DragCallbacks, Conta
       targetBalls = 10;
       remainingBalls = 0;
       isStageClear = false;
-      allStoppedTimer = 0;
+      timeSinceLastShot = 0;
+      hasGravityBoosted = false;
       isGravityBoostActive = false;
       stageText?.text = 'Stage: $currentStage';
       remainingBallsText?.text = 'Balls: 0 / $targetBalls';
