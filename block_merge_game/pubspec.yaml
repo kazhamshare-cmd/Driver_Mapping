@@ -50,6 +50,25 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^5.0.0
 
+  # App icon and splash screen generators
+  flutter_launcher_icons: ^0.14.1
+  flutter_native_splash: ^2.4.1
+
+# App icon configuration (画像ファイルを用意してから有効化)
+# flutter_launcher_icons:
+#   android: true
+#   ios: true
+#   image_path: "assets/icon/app_icon.png"
+#   adaptive_icon_background: "#1a1a2e"
+#   adaptive_icon_foreground: "assets/icon/app_icon.png"
+
+# Splash screen configuration
+flutter_native_splash:
+  color: "#1a1a2e"
+  android: true
+  ios: true
+  # スプラッシュは色のみ（カスタムテキストはFlutterコードで実装）
+
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 
