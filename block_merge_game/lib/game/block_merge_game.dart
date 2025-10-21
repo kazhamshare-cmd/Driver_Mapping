@@ -372,11 +372,19 @@ class BlockMergeGame extends Forge2DGame with TapCallbacks, DragCallbacks, Conta
     for (int i = 0; i < 20; i++) {
       // ランダムな列を選択
       final x = random.nextInt(gridColumns);
-      // 下半分に配置（ゲームオーバー判定を避けるため）
-      final y = (gridRows ~/ 2) + random.nextInt(gridRows ~/ 2);
+
+      // ビリヤードモード：グリッド全体にランダム配置
+      // 重力モード：下半分に配置（ゲームオーバー判定を避けるため）
+      final y = isBilliardMode
+        ? random.nextInt(gridRows)  // 0〜gridRows-1の全範囲
+        : (gridRows ~/ 2) + random.nextInt(gridRows ~/ 2);  // 下半分のみ
 
       if (i == 0) {
-        print('   配置範囲: 行${gridRows ~/ 2}〜${gridRows - 1}');
+        if (isBilliardMode) {
+          print('   ビリヤードモード: 配置範囲 行0〜${gridRows - 1}（全体）');
+        } else {
+          print('   重力モード: 配置範囲 行${gridRows ~/ 2}〜${gridRows - 1}（下半分）');
+        }
       }
 
       final block = GameBlock(
@@ -1451,6 +1459,11 @@ class BlockMergeGame extends Forge2DGame with TapCallbacks, DragCallbacks, Conta
   }
 
   void _checkGameOver() {
+    // ビリヤードモードではゲームオーバー判定なし（ステージクリアベース）
+    if (isBilliardMode) {
+      return;
+    }
+
     // ゲーム開始から3秒以内はゲームオーバー判定をスキップ（初期配置の安定待機）
     if (gameStartTimer < 3.0) {
       return;
