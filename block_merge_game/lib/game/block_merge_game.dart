@@ -216,6 +216,12 @@ class BlockMergeGame extends Forge2DGame with TapCallbacks, DragCallbacks, Conta
 
   // 下部にスポーンエリアを作成
   void _createSpawnArea(double screenHeight) {
+    // ビリヤードモードではスポーンエリア背景を表示しない（グリッド内にスポーンするため）
+    if (isBilliardMode) {
+      print('🎱 ビリヤードモード: スポーンエリア背景なし（グリッド内スポーン）');
+      return;
+    }
+
     final spawnAreaHeight = 100.0;
     final spawnAreaY = gridOffset.y + gridRows * blockSize + 10; // グリッドの下に配置
 
@@ -246,9 +252,11 @@ class BlockMergeGame extends Forge2DGame with TapCallbacks, DragCallbacks, Conta
     final random = Random();
     final ballColors = BlockColor.getAvailableColors(level);
 
-    // ランダムな位置を決定（下部スポーンエリア内）
+    // ランダムな位置を決定
     final spawnX = random.nextInt(gridColumns);
-    final spawnY = gridRows; // グリッドの下
+    // ビリヤードモード：グリッド内の最下部（壁があるため）
+    // 重力モード：グリッドの下（スポーンエリア）
+    final spawnY = isBilliardMode ? gridRows - 1 : gridRows;
 
     // 色の抽選（優先度順）
     BlockColor color;
@@ -416,33 +424,62 @@ class BlockMergeGame extends Forge2DGame with TapCallbacks, DragCallbacks, Conta
   void _createGround() {
     final ceilingY = gridOffset.y;
     final spawnAreaHeight = 100.0; // スポーンエリアの高さ
-    final groundY = gridOffset.y + gridRows * blockSize + spawnAreaHeight; // スポーンエリアの底
+    final gridBottomY = gridOffset.y + gridRows * blockSize; // グリッドの底
+    final spawnBottomY = gridBottomY + spawnAreaHeight; // スポーンエリアの底
 
     // ビリヤードモード：滑らかなテーブル、よく跳ねるクッション
     // 重力モード：適度な摩擦と反発
     final friction = isBilliardMode ? 0.05 : 0.4;
     final restitution = isBilliardMode ? 0.85 : 0.3;
 
-    // 地面（スポーンエリアの底）
-    final groundBody = world.createBody(BodyDef(position: Vector2(gridOffset.x, groundY)));
-    final groundShape = EdgeShape()..set(Vector2(0, 0), Vector2(gridColumns * blockSize, 0));
-    groundBody.createFixture(FixtureDef(groundShape, friction: friction, restitution: restitution));
+    if (isBilliardMode) {
+      // ビリヤードモード：グリッドエリアのみを4方向の壁で完全に囲む
 
-    // 天井（上部）- ボールが上面を超えないように
-    final ceilingBody = world.createBody(BodyDef(position: Vector2(gridOffset.x, ceilingY)));
-    final ceilingShape = EdgeShape()..set(Vector2(0, 0), Vector2(gridColumns * blockSize, 0));
-    ceilingBody.createFixture(FixtureDef(ceilingShape, friction: friction, restitution: restitution));
+      // 上の壁（天井）
+      final topWall = world.createBody(BodyDef(position: Vector2(gridOffset.x, ceilingY)));
+      final topShape = EdgeShape()..set(Vector2(0, 0), Vector2(gridColumns * blockSize, 0));
+      topWall.createFixture(FixtureDef(topShape, friction: friction, restitution: restitution));
 
-    // 左壁（スポーンエリアまで延長）
-    final totalHeight = gridRows * blockSize + spawnAreaHeight;
-    final leftWall = world.createBody(BodyDef(position: Vector2(gridOffset.x, ceilingY)));
-    final leftWallShape = EdgeShape()..set(Vector2(0, 0), Vector2(0, totalHeight));
-    leftWall.createFixture(FixtureDef(leftWallShape, friction: friction, restitution: restitution));
+      // 下の壁（グリッドの底）
+      final bottomWall = world.createBody(BodyDef(position: Vector2(gridOffset.x, gridBottomY)));
+      final bottomShape = EdgeShape()..set(Vector2(0, 0), Vector2(gridColumns * blockSize, 0));
+      bottomWall.createFixture(FixtureDef(bottomShape, friction: friction, restitution: restitution));
 
-    // 右壁（スポーンエリアまで延長）
-    final rightWall = world.createBody(BodyDef(position: Vector2(gridOffset.x + gridColumns * blockSize, ceilingY)));
-    final rightWallShape = EdgeShape()..set(Vector2(0, 0), Vector2(0, totalHeight));
-    rightWall.createFixture(FixtureDef(rightWallShape, friction: friction, restitution: restitution));
+      // 左の壁（グリッドエリアのみ）
+      final leftWall = world.createBody(BodyDef(position: Vector2(gridOffset.x, ceilingY)));
+      final leftShape = EdgeShape()..set(Vector2(0, 0), Vector2(0, gridRows * blockSize));
+      leftWall.createFixture(FixtureDef(leftShape, friction: friction, restitution: restitution));
+
+      // 右の壁（グリッドエリアのみ）
+      final rightWall = world.createBody(BodyDef(position: Vector2(gridOffset.x + gridColumns * blockSize, ceilingY)));
+      final rightShape = EdgeShape()..set(Vector2(0, 0), Vector2(0, gridRows * blockSize));
+      rightWall.createFixture(FixtureDef(rightShape, friction: friction, restitution: restitution));
+
+      print('🎱 ビリヤードモード: グリッドエリアを4方向の壁で囲みました');
+    } else {
+      // 重力モード：スポーンエリアまで延長
+
+      // 地面（スポーンエリアの底）
+      final groundBody = world.createBody(BodyDef(position: Vector2(gridOffset.x, spawnBottomY)));
+      final groundShape = EdgeShape()..set(Vector2(0, 0), Vector2(gridColumns * blockSize, 0));
+      groundBody.createFixture(FixtureDef(groundShape, friction: friction, restitution: restitution));
+
+      // 天井（上部）
+      final ceilingBody = world.createBody(BodyDef(position: Vector2(gridOffset.x, ceilingY)));
+      final ceilingShape = EdgeShape()..set(Vector2(0, 0), Vector2(gridColumns * blockSize, 0));
+      ceilingBody.createFixture(FixtureDef(ceilingShape, friction: friction, restitution: restitution));
+
+      // 左壁（スポーンエリアまで延長）
+      final totalHeight = gridRows * blockSize + spawnAreaHeight;
+      final leftWall = world.createBody(BodyDef(position: Vector2(gridOffset.x, ceilingY)));
+      final leftWallShape = EdgeShape()..set(Vector2(0, 0), Vector2(0, totalHeight));
+      leftWall.createFixture(FixtureDef(leftWallShape, friction: friction, restitution: restitution));
+
+      // 右壁（スポーンエリアまで延長）
+      final rightWall = world.createBody(BodyDef(position: Vector2(gridOffset.x + gridColumns * blockSize, ceilingY)));
+      final rightWallShape = EdgeShape()..set(Vector2(0, 0), Vector2(0, totalHeight));
+      rightWall.createFixture(FixtureDef(rightWallShape, friction: friction, restitution: restitution));
+    }
   }
 
   @override
