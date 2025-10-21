@@ -80,20 +80,26 @@ class GameBlock extends BodyComponent {
     final actualSize = blockSize * effectiveMultiplier;
     final shape = CircleShape()..radius = (actualSize / 2); // 縮小なしで正確な半径
 
+    // ビリヤードモード判定
+    final isBilliardMode = world.gravity.length < 0.1; // 重力がほぼ0ならビリヤードモード
+
     // 色ごとの物理特性を適用
     // サイズ倍率に応じて密度を調整（大きさに関わらず一定の密度）
     final adjustedDensity = blockColor.density;
+
+    // ビリヤードモードでは摩擦を大幅に減少（滑らかなテーブル）
+    final friction = isBilliardMode ? blockColor.friction * 0.2 : blockColor.friction;
 
     final fixtureDef = FixtureDef(
       shape,
       restitution: blockColor.restitution, // 色ごとの反発係数（硬さ）
       density: adjustedDensity,            // サイズ倍率を考慮した密度
-      friction: blockColor.friction,       // 色ごとの摩擦係数
+      friction: friction,                  // 色ごとの摩擦係数（ビリヤードモードでは1/5）
     );
 
-    // ビリヤードモード（重力なし）の場合は空気抵抗を強化
-    final isBilliardMode = world.gravity.length < 0.1; // 重力がほぼ0ならビリヤードモード
-    final damping = isBilliardMode ? 1.2 : 0.2; // ビリヤード: 1.2, 通常: 0.2
+    // ビリヤードモード（重力なし）の場合は空気抵抗をほぼなくす
+    final linearDamping = isBilliardMode ? 0.05 : 0.2; // ビリヤード: 0.05（滑らか）, 通常: 0.2
+    final angularDamping = isBilliardMode ? 0.1 : 0.8; // ビリヤード: 0.1（回転維持）, 通常: 0.8
 
     final bodyDef = BodyDef(
       position: Vector2(
@@ -101,8 +107,8 @@ class GameBlock extends BodyComponent {
         gridOffset.y + gridY * blockSize + blockSize / 2,
       ),
       type: bodyType,
-      linearDamping: damping,  // モードに応じて空気抵抗を調整
-      angularDamping: 0.8, // 回転を抑える
+      linearDamping: linearDamping,  // モードに応じて空気抵抗を調整
+      angularDamping: angularDamping, // モードに応じて回転抵抗を調整
       bullet: true,        // 連続衝突検出を有効化（高速移動でも貫通しない）
       userData: this,      // 衝突検出で使用するために自分自身を設定
     );

@@ -410,26 +410,31 @@ class BlockMergeGame extends Forge2DGame with TapCallbacks, DragCallbacks, Conta
     final spawnAreaHeight = 100.0; // スポーンエリアの高さ
     final groundY = gridOffset.y + gridRows * blockSize + spawnAreaHeight; // スポーンエリアの底
 
+    // ビリヤードモード：滑らかなテーブル、よく跳ねるクッション
+    // 重力モード：適度な摩擦と反発
+    final friction = isBilliardMode ? 0.05 : 0.4;
+    final restitution = isBilliardMode ? 0.85 : 0.3;
+
     // 地面（スポーンエリアの底）
     final groundBody = world.createBody(BodyDef(position: Vector2(gridOffset.x, groundY)));
     final groundShape = EdgeShape()..set(Vector2(0, 0), Vector2(gridColumns * blockSize, 0));
-    groundBody.createFixture(FixtureDef(groundShape, friction: 0.4, restitution: 0.3));
+    groundBody.createFixture(FixtureDef(groundShape, friction: friction, restitution: restitution));
 
     // 天井（上部）- ボールが上面を超えないように
     final ceilingBody = world.createBody(BodyDef(position: Vector2(gridOffset.x, ceilingY)));
     final ceilingShape = EdgeShape()..set(Vector2(0, 0), Vector2(gridColumns * blockSize, 0));
-    ceilingBody.createFixture(FixtureDef(ceilingShape, friction: 0.4, restitution: 0.3));
+    ceilingBody.createFixture(FixtureDef(ceilingShape, friction: friction, restitution: restitution));
 
     // 左壁（スポーンエリアまで延長）
     final totalHeight = gridRows * blockSize + spawnAreaHeight;
     final leftWall = world.createBody(BodyDef(position: Vector2(gridOffset.x, ceilingY)));
     final leftWallShape = EdgeShape()..set(Vector2(0, 0), Vector2(0, totalHeight));
-    leftWall.createFixture(FixtureDef(leftWallShape, friction: 0.4, restitution: 0.3));
+    leftWall.createFixture(FixtureDef(leftWallShape, friction: friction, restitution: restitution));
 
     // 右壁（スポーンエリアまで延長）
     final rightWall = world.createBody(BodyDef(position: Vector2(gridOffset.x + gridColumns * blockSize, ceilingY)));
     final rightWallShape = EdgeShape()..set(Vector2(0, 0), Vector2(0, totalHeight));
-    rightWall.createFixture(FixtureDef(rightWallShape, friction: 0.4, restitution: 0.3));
+    rightWall.createFixture(FixtureDef(rightWallShape, friction: friction, restitution: restitution));
   }
 
   @override
