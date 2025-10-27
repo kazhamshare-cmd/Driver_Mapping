@@ -14,7 +14,7 @@ class GameLogicService {
   
   // 重複防止用の履歴
   final List<String> _recentChallenges = []; // 最近のお題を記録
-  static const int maxRecentChallenges = 5; // 直近5個のお題を記録
+  static const int maxRecentChallenges = 20; // 直近20個のお題を記録
 
   // ひらがな一覧（濁音・半濁音は基本形に統一、「ん」を除く）
   static const List<String> _hiraganaList = [
@@ -279,5 +279,22 @@ class GameLogicService {
   void resetRecentChallenges() {
     _recentChallenges.clear();
     print('🔄 お題重複防止履歴をリセットしました');
+  }
+
+  /// お題に対して回答可能な単語の総数を取得
+  int getAvailableAnswersCount(Challenge challenge) {
+    // 辞書から頭文字で始まる単語を取得
+    final wordsWithHead = _dictionary.getWordsStartingWith(challenge.head);
+
+    // お尻の文字で終わる単語の数をカウント
+    int count = 0;
+    for (final word in wordsWithHead) {
+      final lastChar = _dictionary.getLastCharForShiritori(word);
+      if (lastChar == challenge.tail) {
+        count++;
+      }
+    }
+
+    return count;
   }
 }

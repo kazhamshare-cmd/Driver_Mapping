@@ -50,10 +50,18 @@ class _JoinRoomScreenState extends State<JoinRoomScreen> {
       final updatedRoom = await _roomService.joinRoom(request);
 
       if (mounted) {
+        // 参加したプレイヤーのIDを取得
+        final joinedPlayerId = updatedRoom.players
+            .firstWhere((p) => p.name == _playerNameController.text.trim())
+            .id;
+
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) => OnlineGameScreen(room: updatedRoom),
+            builder: (context) => OnlineGameScreen(
+              room: updatedRoom,
+              currentPlayerId: joinedPlayerId,
+            ),
           ),
         );
       }

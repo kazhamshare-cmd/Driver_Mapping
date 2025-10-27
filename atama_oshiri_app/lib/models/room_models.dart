@@ -1,4 +1,5 @@
 import 'package:uuid/uuid.dart';
+import 'game_models.dart' as game_models;
 
 /// ルーム情報
 class Room {
@@ -11,6 +12,9 @@ class Room {
   final List<Player> players;
   final RoomStatus status;
   final int maxPlayers;
+  final int currentPlayerIndex; // 現在のターンのプレイヤーインデックス
+  final List<String> usedWords; // 現在のお題で使用済みの単語
+  final game_models.Challenge? currentChallenge; // 現在のお題
 
   Room({
     required this.id,
@@ -22,6 +26,9 @@ class Room {
     required this.players,
     this.status = RoomStatus.waiting,
     this.maxPlayers = 4,
+    this.currentPlayerIndex = 0, // デフォルトは最初のプレイヤー
+    this.usedWords = const [], // デフォルトは空リスト
+    this.currentChallenge, // デフォルトはnull
   });
 
   /// ルーム作成
@@ -48,6 +55,7 @@ class Room {
         ),
       ],
       maxPlayers: maxPlayers,
+      currentPlayerIndex: 0, // 最初のプレイヤーから開始
     );
   }
 
@@ -63,6 +71,9 @@ class Room {
       'players': players.map((p) => p.toMap()).toList(),
       'status': status.name,
       'maxPlayers': maxPlayers,
+      'currentPlayerIndex': currentPlayerIndex,
+      'usedWords': usedWords,
+      'currentChallenge': currentChallenge?.toJson(),
     };
   }
 
@@ -83,6 +94,13 @@ class Room {
         orElse: () => RoomStatus.waiting,
       ),
       maxPlayers: map['maxPlayers'] ?? 4,
+      currentPlayerIndex: map['currentPlayerIndex'] ?? 0,
+      usedWords: (map['usedWords'] as List<dynamic>?)
+          ?.map((w) => w.toString())
+          .toList() ?? [],
+      currentChallenge: map['currentChallenge'] != null
+          ? game_models.Challenge.fromJson(map['currentChallenge'])
+          : null,
     );
   }
 
@@ -103,6 +121,9 @@ class Room {
       players: newPlayers,
       status: status,
       maxPlayers: maxPlayers,
+      currentPlayerIndex: currentPlayerIndex,
+      usedWords: usedWords,
+      currentChallenge: currentChallenge,
     );
   }
 
@@ -119,11 +140,19 @@ class Room {
       players: newPlayers,
       status: status,
       maxPlayers: maxPlayers,
+      currentPlayerIndex: currentPlayerIndex,
+      usedWords: usedWords,
+      currentChallenge: currentChallenge,
     );
   }
 
   /// ルーム開始
   Room startGame() {
+    // すべてのプレイヤーのステータスをplayingに変更
+    final playingPlayers = players.map((player) {
+      return player.updateStatus(PlayerStatus.playing);
+    }).toList();
+
     return Room(
       id: id,
       name: name,
@@ -131,9 +160,12 @@ class Room {
       password: password,
       createdAt: createdAt,
       updatedAt: DateTime.now(),
-      players: players,
+      players: playingPlayers,
       status: RoomStatus.playing,
       maxPlayers: maxPlayers,
+      currentPlayerIndex: currentPlayerIndex,
+      usedWords: usedWords,
+      currentChallenge: currentChallenge,
     );
   }
 
@@ -149,6 +181,32 @@ class Room {
       players: players,
       status: RoomStatus.finished,
       maxPlayers: maxPlayers,
+      currentPlayerIndex: currentPlayerIndex,
+      usedWords: usedWords,
+      currentChallenge: currentChallenge,
+    );
+  }
+
+  /// ルームをリセットしてもう一度遊ぶ
+  Room resetForReplay() {
+    // 全プレイヤーのステータスを waiting に戻す
+    final resetPlayers = players.map((player) {
+      return player.updateStatus(PlayerStatus.waiting);
+    }).toList();
+
+    return Room(
+      id: id,
+      name: name,
+      hostName: hostName,
+      password: password,
+      createdAt: createdAt,
+      updatedAt: DateTime.now(),
+      players: resetPlayers,
+      status: RoomStatus.waiting,
+      maxPlayers: maxPlayers,
+      currentPlayerIndex: currentPlayerIndex,
+      usedWords: usedWords,
+      currentChallenge: currentChallenge,
     );
   }
 
@@ -164,7 +222,7 @@ class Room {
   /// ホスト変更（最初のプレイヤーを新しいホストにする）
   Room changeHost() {
     if (players.isEmpty) return this;
-    
+
     final newPlayers = players.map((player) {
       return Player(
         id: player.id,
@@ -185,8 +243,42 @@ class Room {
       players: newPlayers,
       status: status,
       maxPlayers: maxPlayers,
+      currentPlayerIndex: currentPlayerIndex,
+      usedWords: usedWords,
+      currentChallenge: currentChallenge,
     );
   }
+
+  /// プレイヤーステータス更新
+  Room updatePlayerStatus(String playerId, PlayerStatus newStatus) {
+    final newPlayers = players.map((player) {
+      if (player.id == playerId) {
+        return player.updateStatus(newStatus);
+      }
+      return player;
+    }).toList();
+
+    return Room(
+      id: id,
+      name: name,
+      hostName: hostName,
+      password: password,
+      createdAt: createdAt,
+      updatedAt: DateTime.now(),
+      players: newPlayers,
+      status: status,
+      maxPlayers: maxPlayers,
+      currentPlayerIndex: currentPlayerIndex,
+      usedWords: usedWords,
+      currentChallenge: currentChallenge,
+    );
+  }
+
+  /// アクティブなプレイヤー数を取得（脱落していないプレイヤー）
+  int get activePlayerCount => players.where((p) => p.status == PlayerStatus.playing).length;
+
+  /// アクティブなプレイヤーリストを取得
+  List<Player> get activePlayers => players.where((p) => p.status == PlayerStatus.playing).toList();
 }
 
 /// プレイヤー情報
@@ -254,6 +346,7 @@ enum PlayerStatus {
   waiting,    // 待機中
   ready,      // 準備完了
   playing,    // プレイ中
+  eliminated, // 脱落
   finished,   // 終了
 }
 

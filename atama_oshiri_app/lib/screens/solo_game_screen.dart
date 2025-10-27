@@ -29,7 +29,7 @@ enum GameState {
   gameOver,       // ゲームオーバー
 }
 
-class _SoloGameScreenState extends State<SoloGameScreen> {
+class _SoloGameScreenState extends State<SoloGameScreen> with WidgetsBindingObserver {
   final GameLogicService _gameLogic = GameLogicService.instance;
   final SpeechService _speech = SpeechService.instance;
   final SoundService _sound = SoundService.instance;
@@ -71,11 +71,30 @@ class _SoloGameScreenState extends State<SoloGameScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _initializeGame();
     _initializeGameCenter();
     _loadBannerAd();
-    
-    // 音声認識の設定（元の状態に戻す）
+    _ad.loadInterstitialAd();
+
+    // 音声認識の設定 - マイク状態を正確に反映
+    _speech.onListeningStarted = () {
+      if (mounted) {
+        setState(() {
+          _isListening = true;
+        });
+        print('🎤 マイク起動: UIを「音声認識中」に更新');
+      }
+    };
+
+    _speech.onListeningStopped = () {
+      if (mounted) {
+        setState(() {
+          _isListening = false;
+        });
+        print('🎤 マイク停止: UIを「認識停止」に更新');
+      }
+    };
   }
 
   Future<void> _initializeGameCenter() async {
@@ -111,10 +130,52 @@ class _SoloGameScreenState extends State<SoloGameScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _countdownTimer?.cancel();
     _answerTimer?.cancel();
     _bannerAd?.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    
+    switch (state) {
+      case AppLifecycleState.paused:
+      case AppLifecycleState.inactive:
+      case AppLifecycleState.detached:
+      case AppLifecycleState.hidden:
+        // アプリがバックグラウンドになった時、ゲームを終了
+        print('📱 アプリがバックグラウンドになりました。ゲームを終了します。');
+        _endGameDueToBackground();
+        break;
+      case AppLifecycleState.resumed:
+        // アプリがフォアグラウンドに戻った時
+        print('📱 アプリがフォアグラウンドに戻りました。');
+        break;
+    }
+  }
+
+  /// バックグラウンドによるゲーム終了
+  void _endGameDueToBackground() {
+    // タイマーを停止
+    _countdownTimer?.cancel();
+    _answerTimer?.cancel();
+    
+    // 音声認識を停止
+    _speech.stopListening();
+    
+    // サウンドを停止
+    _sound.stop();
+    
+    // ゲーム状態を終了に設定
+    setState(() {
+      _gameState = GameState.gameOver;
+    });
+    
+    // ゲームオーバーダイアログを表示
+    _showGameOverDialog();
   }
 
   void _initializeGame() {
@@ -166,9 +227,12 @@ class _SoloGameScreenState extends State<SoloGameScreen> {
   }
 
   void _startCountdown() {
-    // 音声認識状態を確実にリセット
+    // 音声認識状態をリセット
+    print('🔄 カウントダウン開始: 音声認識状態をリセット');
     _speech.stopListening();
-    
+    // リソース解放のためにキャンセルも実行（非同期で、UIタイミングに影響しない）
+    _speech.cancel();
+
     setState(() {
       _gameState = GameState.countdown;
       _countdownSeconds = 7.8;
@@ -176,8 +240,6 @@ class _SoloGameScreenState extends State<SoloGameScreen> {
       _isListening = false;
       _recognizedText = '';
     });
-    
-    print('🔄 カウントダウン開始: 音声認識状態をリセット');
 
     // 10秒BGMを再生（7.8秒カウントダウンだが、BGMは継続）
     _sound.playCountdown10sec();
@@ -199,7 +261,7 @@ class _SoloGameScreenState extends State<SoloGameScreen> {
   void _startAnswering() {
     setState(() {
       _gameState = GameState.answering;
-      _answerSeconds = 8;
+      _answerSeconds = 5.0;
       _timerProgress = 0.0;
       _recognizedText = '';
     });
@@ -209,22 +271,21 @@ class _SoloGameScreenState extends State<SoloGameScreen> {
     // 回答開始時のバイブレーション
     _sound.vibrate();
 
-    // 音声認識コールバック設定
+    // 音声認識コールバック設定（オンラインモードと同じシンプルな構造）
     _speech.onResult = (text) {
-      if (!mounted || _gameState != GameState.answering) return;
-
-      // speech_serviceで既にひらがな変換されているのでそのまま使用
-      setState(() {
-        _recognizedText = text;
-      });
-      print('🎤 画面表示: $_recognizedText');
+      if (mounted && _gameState == GameState.answering) {
+        setState(() {
+          _recognizedText = text;
+        });
+        print('🎤 音声認識結果（リアルタイム）: $_recognizedText');
+      }
     };
 
     _speech.onListeningStopped = () {
       if (!mounted || _gameState != GameState.answering) return;
 
       // 音声認識が途中で停止した場合、タイマーが残っていれば再開
-      final elapsedTime = 8.0 - _answerSeconds;
+      final elapsedTime = 5.0 - _answerSeconds;
       print('🎤 音声認識が停止しました（経過時間: ${elapsedTime.toStringAsFixed(1)}秒、残り: ${_answerSeconds.toStringAsFixed(1)}秒）');
 
       // 音声認識結果が空の場合は再開を試行
@@ -248,11 +309,11 @@ class _SoloGameScreenState extends State<SoloGameScreen> {
     // 音声認識開始
     _startListening();
 
-    // 8秒回答タイマー
+    // 5秒回答タイマー
     _answerTimer = Timer.periodic(const Duration(milliseconds: 100), (timer) {
       setState(() {
-        _timerProgress += 0.0125; // 8秒で1.0
-        _answerSeconds = 8 - (_timerProgress * 8); // 小数点表示のため ceil を削除
+        _timerProgress += 0.02; // 5秒で1.0
+        _answerSeconds = 5.0 - (_timerProgress * 5.0);
 
         if (_answerSeconds <= 0) {
           timer.cancel();
@@ -272,22 +333,24 @@ class _SoloGameScreenState extends State<SoloGameScreen> {
   }
 
   Future<void> _restartListening() async {
-    // 音声認識を強制的にリセットして再開
+    // 音声認識を停止して再開
     await _speech.stopListening();
+    await _speech.cancel(); // リソース解放
+
     setState(() {
       _isListening = false;
     });
-    
+
     // 言い直しの場合は結果をリセットしない（新しい結果が前の結果を上書きする）
     // _recognizedText = '';
     // _intermediateText = '';
-    
+
     // 少し待ってから再開
     await Future.delayed(const Duration(milliseconds: 500));
     
     // 残り時間に応じたタイムアウトで再開
     try {
-      final remainingSeconds = (_answerSeconds.ceil()).clamp(2, 8); // 最低2秒、最大8秒
+      final remainingSeconds = (_answerSeconds.ceil()).clamp(2, 5); // 最低2秒、最大5秒
       print('🎤 音声認識を再開します（残り時間: ${_answerSeconds.toStringAsFixed(1)}秒 → ${remainingSeconds}秒）');
       print('🎤 期待される頭文字: "${_currentChallenge.head}"');
       await _speech.startListening(
@@ -316,9 +379,7 @@ class _SoloGameScreenState extends State<SoloGameScreen> {
       return;
     }
 
-    setState(() {
-      _isListening = true;
-    });
+    // _isListeningの更新はonListeningStartedコールバックで行う（マイク起動後）
 
     try {
       print('🎤 音声認識を開始します（タイムアウト: ${_answerSeconds}秒）');
@@ -327,11 +388,15 @@ class _SoloGameScreenState extends State<SoloGameScreen> {
         timeout: Duration(seconds: _answerSeconds.toInt()),
         expectedHead: _currentChallenge.head,
       );
+      // マイクが実際に起動したら、onListeningStartedで_isListening = trueになる
     } catch (e) {
       print('❌ 音声認識エラー: $e');
-      setState(() {
-        _isListening = false;
-      });
+      // エラー時は明示的にfalseに設定
+      if (mounted) {
+        setState(() {
+          _isListening = false;
+        });
+      }
     }
   }
 
@@ -413,16 +478,17 @@ class _SoloGameScreenState extends State<SoloGameScreen> {
   /// シミュレーター用フォールバック機能
   void _enableSimulatorFallback({String? expectedTail}) {
     print('📱 シミュレーター用フォールバック機能を有効化');
-    print('💡 実機でのテストを推奨しますが、デバッグ用のサンプル回答を提供します');
-    
-    // デバッグ用のサンプル回答を提供（期待される尻文字も考慮）
-    final sampleWords = _getSampleWordsForHead(_currentChallenge.head, expectedTail: expectedTail);
+    print('💡 実機でのテストを推奨します');
+
+    // TODO: デバッグ用のサンプル回答機能は一時的に無効化
+    // final sampleWords = _getSampleWordsForHead(_currentChallenge.head, expectedTail: expectedTail);
+    final sampleWords = <String>[]; // 空のリストで対応
     if (sampleWords.isNotEmpty) {
       print('📝 デバッグ用サンプル回答: ${sampleWords.join(', ')}');
       // 最初のサンプル単語を自動選択（デバッグ用）
       final selectedWord = sampleWords.first;
       print('🎯 デバッグ用選択: "$selectedWord"');
-      
+
       // 少し遅延してから結果を返す（リアルな音声認識をシミュレート）
       Future.delayed(const Duration(milliseconds: 1000), () {
         if (mounted && _gameState == GameState.answering) {
@@ -448,79 +514,37 @@ class _SoloGameScreenState extends State<SoloGameScreen> {
     }
   }
   
-  /// 頭文字に基づくサンプル単語を取得
-  List<String> _getSampleWordsForHead(String head, {String? expectedTail}) {
-    final sampleWords = {
-      'あ': ['あい', 'あお', 'あか', 'あき', 'あさ'],
-      'い': ['いえ', 'いけ', 'いし', 'いち', 'いぬ'],
-      'う': ['うえ', 'うし', 'うま', 'うみ', 'うる'],
-      'え': ['えき', 'えん', 'えほん', 'えがお', 'えいが'],
-      'お': ['おか', 'おに', 'おと', 'おはな', 'おかし'],
-      'か': ['かき', 'かみ', 'かばん', 'かぜ', 'かお'],
-      'き': ['きのう', 'きょう', 'きのこ', 'きいろ', 'きつね'],
-      'く': ['くも', 'くつ', 'くま', 'くち', 'くるま'],
-      'け': ['けん', 'けが', 'けしき', 'けいと', 'けいさつ'],
-      'こ': ['こども', 'こんにちは', 'こんばんは', 'こおり', 'こねこ'],
-      'さ': ['さくら', 'さかな', 'さとう', 'さく', 'さる'],
-      'し': ['しろ', 'しんぶん', 'しゃしん', 'しゅうまつ', 'しゅくだい'],
-      'す': ['すし', 'すず', 'すいか', 'すいえい', 'すいとう'],
-      'せ': ['せんせい', 'せかい', 'せき', 'せんたく', 'せいかつ'],
-      'そ': ['そら', 'そと', 'そば', 'そうじ', 'そうべつ'],
-      'た': ['たまご', 'たべもの', 'たのしい', 'たてもの', 'たからもの'],
-      'ち': ['ちいさい', 'ちから', 'ちず', 'ちょう', 'ちかてつ'],
-      'つ': ['つき', 'つくえ', 'つり', 'つま', 'つくし'],
-      'て': ['てがみ', 'てんき', 'てんらんかい', 'てんぷら', 'てんさい'],
-      'と': ['とけい', 'とり', 'とし', 'とけい', 'としょかん'],
-      'な': ['なつ', 'なか', 'なまえ', 'なかま', 'なつやすみ'],
-      'に': ['にほん', 'にわ', 'にんぎょう', 'にゅうがく', 'にゅういん'],
-      'ぬ': ['ぬいぐるみ', 'ぬの', 'ぬりえ', 'ぬま', 'ぬすみ'],
-      'ね': ['ねこ', 'ねんがじょう', 'ねつ', 'ねむい', 'ねがお'],
-      'の': ['のり', 'のう', 'のうりん', 'のうぎょう', 'のうみん'],
-      'は': ['はな', 'はる', 'はし', 'はなび', 'はたらく'],
-      'ひ': ['ひこうき', 'ひまわり', 'ひる', 'ひこうき', 'ひがし'],
-      'ふ': ['ふね', 'ふく', 'ふゆ', 'ふとん', 'ふくざつ'],
-      'へ': ['へや', 'へいわ', 'へん', 'へいき', 'へいわ'],
-      'ほ': ['ほん', 'ほし', 'ほんとう', 'ほんや', 'ほんしつ'],
-      'ま': ['まど', 'まち', 'まんが', 'まつり', 'まんねんひつ'],
-      'み': ['みず', 'みどり', 'みち', 'みなみ', 'みなさん'],
-      'む': ['むし', 'むら', 'むかし', 'むすこ', 'むすめ'],
-      'め': ['めがね', 'めん', 'めいし', 'めがね', 'めんきょ'],
-      'も': ['もも', 'もり', 'もん', 'もんく', 'もんし'],
-      'や': ['やま', 'やさい', 'やね', 'やくそく', 'やまびこ'],
-      'ゆ': ['ゆき', 'ゆめ', 'ゆうがた', 'ゆうびん', 'ゆうじん'],
-      'よ': ['よる', 'よてい', 'よろしく', 'よし', 'よろこび'],
-      'ら': ['らくがき', 'らく', 'らくせん', 'らくがき', 'らくがき'],
-      'り': ['りんご', 'りょこう', 'りょうり', 'りょうし', 'りょうり'],
-      'る': ['るす', 'るい', 'るいけい', 'るいけい', 'るいけい'],
-      'れ': ['れきし', 'れんしゅう', 'れんあい', 'れんしゅう', 'れんあい'],
-      'ろ': ['ろく', 'ろくがつ', 'ろくがつ', 'ろくがつ', 'ろくがつ'],
-      'わ': ['わか', 'わかもの', 'わかもの', 'わかもの', 'わかもの'],
-      'を': ['を', 'を', 'を', 'を', 'を'],
-    };
-    
-    // 基本的なサンプル単語を取得
-    List<String> words = sampleWords[head] ?? [];
-    
-    // 2文字の単語を除外（3文字以上のみ）
-    words = words.where((word) => word.length >= 3).toList();
-    
-    // 期待される尻文字が指定されている場合は、それに合致する単語を優先
-    if (expectedTail != null && words.isNotEmpty) {
-      final matchingWords = words.where((word) => 
-        word.isNotEmpty && word.endsWith(expectedTail)).toList();
+  /// 辞書ファイルから正解例を取得
+  Future<List<String>> _getAnswerExamplesFromDictionary(String head, {String? expectedTail}) async {
+    try {
+      // 辞書から該当する単語を取得
+      final words = await _dictionary.getWordsStartingWith(head);
       
-      if (matchingWords.isNotEmpty) {
-        print('🎯 期待される尻文字 "$expectedTail" に合致する単語を優先: ${matchingWords.join(', ')}');
-        return matchingWords;
-      } else {
-        print('⚠️ 期待される尻文字 "$expectedTail" に合致する単語が見つかりません。基本単語を使用します');
+      // 3文字以上の単語のみにフィルタ
+      final filteredWords = words.where((word) => word.length >= 3).toList();
+      
+      // 期待される尻文字が指定されている場合は、それに合致する単語を優先
+      if (expectedTail != null && filteredWords.isNotEmpty) {
+        final matchingWords = filteredWords.where((word) => 
+          word.isNotEmpty && word.endsWith(expectedTail)).toList();
+        
+        if (matchingWords.isNotEmpty) {
+          print('🎯 期待される尻文字 "$expectedTail" に合致する単語を優先: ${matchingWords.join(', ')}');
+          return matchingWords.take(10).toList(); // 最大10個
+        }
       }
+      
+      // ランダムに10個選択
+      final shuffled = List<String>.from(filteredWords)..shuffle();
+      return shuffled.take(10).toList();
+      
+    } catch (e) {
+      print('❌ 辞書から正解例取得エラー: $e');
+      return [];
     }
-    
-    return words;
   }
 
-  void _showGameOverDialog() {
+  void _showGameOverDialog() async {
     setState(() {
       _gameState = GameState.gameOver;
     });
@@ -531,176 +555,317 @@ class _SoloGameScreenState extends State<SoloGameScreen> {
       score: _score,
     );
 
+    // 0.5秒待ってから広告表示
+    await Future.delayed(const Duration(milliseconds: 500));
+
+    // インタースティシャル広告を20%の確率で表示（広告が閉じられた後にダイアログを表示）
+    if (_ad.isInterstitialAdReady && Random().nextDouble() < 0.2) {
+      await _ad.showInterstitialAd(
+        onAdClosed: () {
+          // 広告が閉じられた後にダイアログを表示
+          if (mounted) {
+            _showGameOverDialogContent();
+          }
+        },
+      );
+    } else {
+      // 広告を表示しない場合は直接ダイアログを表示
+      _showGameOverDialogContent();
+    }
+  }
+
+  void _showGameOverDialogContent() {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        title: const Text(
-          'ゲームオーバー',
-          style: TextStyle(
-            fontSize: 28,
-            fontWeight: FontWeight.bold,
-            color: Colors.red,
-          ),
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
         ),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(
-                Icons.cancel,
-                size: 80,
-                color: Colors.red,
-              ),
-              const SizedBox(height: 16),
-              // プレイヤーの回答を表示
+        child: Container(
+          constraints: const BoxConstraints(
+            maxWidth: 400,
+            maxHeight: 600, // 最大高さを制限
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+              // ヘッダー部分
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                width: double.infinity,
+                padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.grey.shade300),
+                  color: Colors.red.shade50,
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(20),
+                    topRight: Radius.circular(20),
+                  ),
                 ),
                 child: Column(
                   children: [
+                    const Icon(
+                      Icons.cancel,
+                      size: 60,
+                      color: Colors.red,
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'ゲームオーバー',
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.red,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+              
+              // コンテンツ部分
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  children: [
+                    // プレイヤーの回答を表示
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.grey.shade300),
+                      ),
+                      child: Column(
+                        children: [
+                          Text(
+                            'あなたの回答',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey.shade600,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            _playerAnswer.isEmpty ? '無回答' : _playerAnswer,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    
+                    const SizedBox(height: 20),
+                    
+                    // スコア表示（横並び）
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          '最終スコア',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          '$_score点',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.deepPurple,
+                          ),
+                        ),
+                      ],
+                    ),
+                    
+                    const SizedBox(height: 8),
+                    
                     Text(
-                      'あなたの回答',
+                      '正答数: ${_player.wordCount}個',
                       style: TextStyle(
                         fontSize: 14,
                         color: Colors.grey.shade600,
-                        fontWeight: FontWeight.bold,
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      _playerAnswer,
-                      style: const TextStyle(
+                    
+                    if (_player.wordCount > 0)
+                      Text(
+                        '平均点: ${(_score / _player.wordCount).toStringAsFixed(1)}点',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+
+                    // 不正解時の解答例表示（辞書から取得）
+                    const SizedBox(height: 24),
+                    const Divider(),
+                    const SizedBox(height: 16),
+                    const Text(
+                      '正しい解答例',
+                      style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: Colors.black87,
+                        color: Colors.deepPurple,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 12),
+                    FutureBuilder<List<String>>(
+                      future: _getRandomAnswerExamples(10),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState == ConnectionState.waiting) {
+                          return const Center(
+                            child: CircularProgressIndicator(),
+                          );
+                        }
+                        
+                        if (snapshot.hasError || !snapshot.hasData || snapshot.data!.isEmpty) {
+                          return const Text(
+                            '正解例を取得できませんでした',
+                            style: TextStyle(
+                              color: Colors.grey,
+                              fontSize: 14,
+                            ),
+                          );
+                        }
+                        
+                        return Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          alignment: WrapAlignment.center,
+                          children: snapshot.data!.map((word) {
+                            return Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: Colors.deepPurple.shade50,
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: Colors.deepPurple.shade200,
+                                ),
+                              ),
+                              child: Text(
+                                word,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.deepPurple.shade700,
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              
+              // ボタン部分
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade50,
+                  borderRadius: const BorderRadius.only(
+                    bottomLeft: Radius.circular(20),
+                    bottomRight: Radius.circular(20),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    // メニューに戻るボタン
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          Navigator.pop(context); // ダイアログを閉じる
+                          Navigator.pop(context); // メニュー画面に戻る
+                        },
+                        icon: const Icon(Icons.home, size: 20),
+                        label: const Text('メニューに戻る'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.grey.shade700,
+                          side: BorderSide(color: Colors.grey.shade400),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ),
+                    
+                    const SizedBox(width: 12),
+                    
+                    // もう一度プレイボタン
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          _resetGame();
+                        },
+                        icon: const Icon(Icons.refresh, size: 20),
+                        label: const Text('もう一度プレイ'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.deepPurple,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 4,
+                          shadowColor: Colors.deepPurple.withOpacity(0.3),
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 16),
-              Text(
-                '最終スコア',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                '$_score点',
-                style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                  color: Colors.deepPurple,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text('正答数: ${_player.wordCount}個'),
-              if (_player.wordCount > 0)
-                Text('平均点: ${(_score / _player.wordCount).toStringAsFixed(1)}点'),
-
-              // 不正解時の解答例表示（ランダム10個）
-              if (_answerExamples.isNotEmpty) ...[
-                const SizedBox(height: 24),
-                const Divider(),
-                const SizedBox(height: 16),
-                Text(
-                  '正しい解答例（ランダム10個）',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.deepPurple.shade700,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  alignment: WrapAlignment.center,
-                  children: _getRandomAnswerExamples(10).map((word) {
-                    return Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.deepPurple.shade50,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: Colors.deepPurple.shade200,
-                        ),
-                      ),
-                      child: Text(
-                        word,
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.deepPurple.shade700,
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                ),
-              ],
             ],
+            ),
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context); // ダイアログを閉じる
-              Navigator.pop(context); // メニュー画面に戻る
-            },
-            child: const Text('メニューに戻る'),
-          ),
-          if (_gameCenter.isSignedIn)
-            TextButton(
-              onPressed: () {
-                _gameCenter.showLeaderboard();
-              },
-              style: TextButton.styleFrom(
-                foregroundColor: Colors.green,
-              ),
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.leaderboard, size: 20),
-                  SizedBox(width: 4),
-                  Text('ランキング'),
-                ],
-              ),
-            ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              setState(() {
-                _score = 0;
-                _usedWords.clear();
-                _answers.clear();
-                _player = Player(
-                  id: const Uuid().v4(),
-                  name: 'プレイヤー',
-                  status: PlayerStatus.playing,
-                );
-                _startNewRound();
-              });
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.deepPurple,
-            ),
-            child: const Text('もう一度プレイ'),
-          ),
-        ],
       ),
     );
   }
 
-  /// ランダムな解答例を取得
-  List<String> _getRandomAnswerExamples(int count) {
-    if (_answerExamples.isEmpty) return [];
+  /// ランダムな解答例を取得（辞書から）
+  Future<List<String>> _getRandomAnswerExamples(int count) async {
+    if (_currentChallenge == null) return [];
     
-    final List<String> shuffled = List.from(_answerExamples);
-    shuffled.shuffle();
-    return shuffled.take(count).toList();
+    try {
+      // 辞書から正解例を取得
+      final examples = await _getAnswerExamplesFromDictionary(
+        _currentChallenge!.head,
+        expectedTail: _currentChallenge!.tail,
+      );
+      
+      return examples.take(count).toList();
+    } catch (e) {
+      print('❌ 正解例取得エラー: $e');
+      return [];
+    }
+  }
+
+  
+
+  // ゲームリセットメソッド
+  void _resetGame() {
+    setState(() {
+      _score = 0;
+      _usedWords.clear();
+      _answers.clear();
+      _player = Player(
+        id: const Uuid().v4(),
+        name: 'プレイヤー',
+        status: PlayerStatus.playing,
+      );
+      _startNewRound();
+    });
   }
 
   @override
@@ -1080,20 +1245,37 @@ class _SoloGameScreenState extends State<SoloGameScreen> {
             ],
           ),
           child: Center(
-            child: Text(
-              _countdownSeconds.toStringAsFixed(1),
-              style: TextStyle(
-                fontSize: 64,
-                fontWeight: FontWeight.bold,
-                color: Colors.deepPurple.shade800,
-                shadows: [
-                  Shadow(
-                    color: Colors.white.withValues(alpha: 0.5),
-                    offset: const Offset(0, 1),
-                    blurRadius: 2,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  _countdownSeconds.toStringAsFixed(1),
+                  style: TextStyle(
+                    fontSize: 64,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.deepPurple.shade800,
+                    shadows: [
+                      Shadow(
+                        color: Colors.white.withValues(alpha: 0.5),
+                        offset: const Offset(0, 1),
+                        blurRadius: 2,
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 10, left: 4),
+                  child: Text(
+                    '秒',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.deepPurple.shade600,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -1242,7 +1424,7 @@ class _SoloGameScreenState extends State<SoloGameScreen> {
                 ),
               ] else ...[
                 Text(
-                  _recognizedText,
+                  _recognizedText.isEmpty ? '認識中...' : _recognizedText,
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 32,

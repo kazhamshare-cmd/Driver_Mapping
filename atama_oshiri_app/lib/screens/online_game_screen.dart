@@ -6,10 +6,12 @@ import 'online_game_play_screen.dart';
 /// オンライン対戦画面
 class OnlineGameScreen extends StatefulWidget {
   final Room room;
+  final String currentPlayerId;
 
   const OnlineGameScreen({
     super.key,
     required this.room,
+    required this.currentPlayerId,
   });
 
   @override
@@ -19,12 +21,13 @@ class OnlineGameScreen extends StatefulWidget {
 class _OnlineGameScreenState extends State<OnlineGameScreen> {
   final RoomService _roomService = RoomService.instance;
   late Stream<Room?> _roomStream;
+  bool _isNavigating = false; // 画面遷移フラグ
 
   @override
   void initState() {
     super.initState();
     _roomStream = _roomService.getRoom(widget.room.id);
-    
+
     // ルームの生存確認を実行
     _checkRoomHealth();
   }
@@ -77,6 +80,31 @@ class _OnlineGameScreenState extends State<OnlineGameScreen> {
               final room = snapshot.data;
               if (room == null) {
                 return _buildRoomNotFoundScreen();
+              }
+
+              // ルームステータスがplayingになったら、ゲーム画面に自動遷移
+              print('🎮 [準備画面] ルームステータス: ${room.status}, 遷移フラグ: $_isNavigating');
+              if (room.status == RoomStatus.playing && !_isNavigating) {
+                print('🎮 [準備画面] ゲーム画面への遷移を開始します');
+                _isNavigating = true; // 遷移フラグを設定
+                
+                // 即座に画面遷移を実行
+                Future.microtask(() {
+                  if (mounted) {
+                    print('🎮 [準備画面] Navigator.pushReplacementを実行します');
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => OnlineGamePlayScreen(
+                          room: room,
+                          currentPlayerId: widget.currentPlayerId,
+                        ),
+                      ),
+                    );
+                  }
+                });
+              } else if (room.status == RoomStatus.playing && _isNavigating) {
+                print('🎮 [準備画面] 既に遷移中です - スキップ');
               }
 
               return _buildGameScreen(room);
@@ -488,6 +516,8 @@ class _OnlineGameScreenState extends State<OnlineGameScreen> {
         return '準備完了';
       case PlayerStatus.playing:
         return 'プレイ中';
+      case PlayerStatus.eliminated:
+        return '脱落';
       case PlayerStatus.finished:
         return '終了';
     }
@@ -501,6 +531,8 @@ class _OnlineGameScreenState extends State<OnlineGameScreen> {
         return Colors.green;
       case PlayerStatus.playing:
         return Colors.blue;
+      case PlayerStatus.eliminated:
+        return Colors.red;
       case PlayerStatus.finished:
         return Colors.orange;
     }
@@ -508,22 +540,21 @@ class _OnlineGameScreenState extends State<OnlineGameScreen> {
 
   bool _isHost(Room room) {
     // 現在のユーザーがホストかどうかを判定
-    // 実際の実装では、ユーザーIDやセッション管理が必要
-    // 仮実装: 最初のプレイヤーがホストと仮定
-    if (room.players.isEmpty) return false;
-    return room.players.first.isHost;
+    final currentPlayer = room.players.firstWhere(
+      (p) => p.id == widget.currentPlayerId,
+      orElse: () => room.players.first,
+    );
+    return currentPlayer.isHost;
   }
 
   Future<void> _startGame(Room room) async {
     try {
+      print('🎮 [準備画面] ゲーム開始を試行します: ${room.id}');
       await _roomService.startRoom(room.id);
+      print('🎮 [準備画面] ルーム開始成功');
       
-      // ゲーム開始成功時の画面遷移
+      // ゲーム開始成功時のメッセージ表示のみ
       if (mounted) {
-        // 実際のゲーム画面に遷移
-        // ここでは仮実装として、ルーム画面を更新
-        setState(() {});
-        
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('ゲームを開始しました！'),
@@ -531,15 +562,10 @@ class _OnlineGameScreenState extends State<OnlineGameScreen> {
           ),
         );
         
-        // 実際のゲーム画面への遷移
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => OnlineGamePlayScreen(room: room),
-          ),
-        );
+        // StreamBuilderで自動的に画面遷移されるため、ここでは遷移しない
       }
     } catch (e) {
+      print('🎮 [準備画面] ゲーム開始エラー: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -553,13 +579,13 @@ class _OnlineGameScreenState extends State<OnlineGameScreen> {
 
   Future<void> _leaveRoom(Room room) async {
     try {
-      // 実際の実装では、プレイヤーIDを管理する必要がある
-      await _roomService.leaveRoom(room.id, 'current_player_id');
-      
+      await _roomService.leaveRoom(room.id, widget.currentPlayerId);
+
       if (mounted) {
         Navigator.pop(context);
       }
     } catch (e) {
+      print('❌ ルーム退出エラー: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

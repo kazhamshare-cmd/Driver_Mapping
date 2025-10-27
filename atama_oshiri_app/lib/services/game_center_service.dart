@@ -1,4 +1,4 @@
-import 'package:games_services/games_services.dart';
+// import 'package:games_services/games_services.dart';
 import 'package:flutter/foundation.dart';
 import '../models/room_models.dart' as room_models;
 
@@ -12,153 +12,69 @@ class GameCenterService {
   bool _isSignedIn = false;
   bool get isSignedIn => _isSignedIn;
 
-  /// サービス初期化
+  /// サービス初期化（無効化）
   Future<void> initialize() async {
-    try {
-      // 自動サインインを試行
-      await signIn();
-      if (kDebugMode) {
-        print('GameCenter: 初期化完了');
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print('GameCenter: 初期化エラー - $e');
-      }
+    if (kDebugMode) {
+      print('GameCenter: 無効化されているため初期化をスキップ');
     }
   }
 
-  /// GameCenterにサインイン
+  /// GameCenterにサインイン（無効化）
   Future<bool> signIn() async {
-    try {
-      await GamesServices.signIn();
-      _isSignedIn = true;
-      if (kDebugMode) {
-        print('GameCenter: サインイン成功');
-      }
-      return true;
-    } catch (e) {
-      if (kDebugMode) {
-        print('GameCenter: サインイン失敗 - $e');
-      }
-      return false;
+    if (kDebugMode) {
+      print('GameCenter: 無効化されているためサインインをスキップ');
     }
+    return false;
   }
 
-  /// GameCenterからサインアウト
+  /// GameCenterからサインアウト（無効化）
   Future<void> signOut() async {
-    try {
-      // games_services 4.1.1ではサインアウト機能が削除されている
-      _isSignedIn = false;
-      if (kDebugMode) {
-        print('GameCenter: サインアウト成功');
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print('GameCenter: サインアウト失敗 - $e');
-      }
+    if (kDebugMode) {
+      print('GameCenter: 無効化されているためサインアウトをスキップ');
     }
   }
 
-  /// スコアをリーダーボードに送信
+  /// スコアをリーダーボードに送信（無効化）
   Future<bool> submitScore({
     required String leaderboardId,
     required int score,
   }) async {
-    try {
-      await GamesServices.submitScore(
-        score: Score(
-          androidLeaderboardID: leaderboardId,
-          iOSLeaderboardID: leaderboardId,
-          value: score,
-        ),
-      );
-      if (kDebugMode) {
-        print('GameCenter: スコア送信成功 - $score');
-      }
-      return true;
-    } catch (e) {
-      if (kDebugMode) {
-        print('GameCenter: スコア送信失敗 - $e');
-      }
-      return false;
+    if (kDebugMode) {
+      print('GameCenter: 無効化されているためスコア送信をスキップ - $leaderboardId: $score');
     }
+    return false;
   }
 
-  /// アチーブメントを解除
+  /// アチーブメントを解除（無効化）
   Future<bool> unlockAchievement({
     required String achievementId,
     double percent = 100.0,
   }) async {
-    try {
-      await GamesServices.unlock(
-        achievement: Achievement(
-          androidID: achievementId,
-          iOSID: achievementId,
-          percentComplete: percent,
-        ),
-      );
-      if (kDebugMode) {
-        print('GameCenter: アチーブメント解除成功 - $achievementId');
-      }
-      return true;
-    } catch (e) {
-      if (kDebugMode) {
-        print('GameCenter: アチーブメント解除失敗 - $e');
-      }
-      return false;
+    if (kDebugMode) {
+      print('GameCenter: 無効化されているためアチーブメント解除をスキップ - $achievementId');
     }
+    return false;
   }
 
-  /// リーダーボードを表示
+  /// リーダーボードを表示（無効化）
   Future<void> showLeaderboard({String? leaderboardId}) async {
-    try {
-      await GamesServices.showLeaderboards(
-        androidLeaderboardID: leaderboardId,
-        iOSLeaderboardID: leaderboardId,
-      );
-      if (kDebugMode) {
-        print('GameCenter: リーダーボード表示成功');
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print('GameCenter: リーダーボード表示失敗 - $e');
-      }
+    if (kDebugMode) {
+      print('GameCenter: 無効化されているためリーダーボード表示をスキップ');
     }
   }
 
-  /// アチーブメントを表示
+  /// アチーブメントを表示（無効化）
   Future<void> showAchievements() async {
-    try {
-      await GamesServices.showAchievements();
-      if (kDebugMode) {
-        print('GameCenter: アチーブメント表示成功');
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print('GameCenter: アチーブメント表示失敗 - $e');
-      }
+    if (kDebugMode) {
+      print('GameCenter: 無効化されているためアチーブメント表示をスキップ');
     }
   }
 
-  /// プレイヤー情報を取得
+  /// プレイヤー情報を取得（無効化）
   Future<room_models.Player?> getPlayerInfo() async {
-    try {
-      final playerId = await GamesServices.getPlayerID();
-      if (kDebugMode) {
-        print('GameCenter: プレイヤー情報取得成功 - $playerId');
-      }
-      // Playerオブジェクトを作成（仮実装）
-      return room_models.Player(
-        id: playerId ?? 'unknown',
-        name: 'Player',
-        isHost: false,
-        joinedAt: DateTime.now(),
-      );
-    } catch (e) {
-      if (kDebugMode) {
-        print('GameCenter: プレイヤー情報取得失敗 - $e');
-      }
-      return null;
+    if (kDebugMode) {
+      print('GameCenter: 無効化されているためプレイヤー情報取得をスキップ');
     }
+    return null;
   }
 }

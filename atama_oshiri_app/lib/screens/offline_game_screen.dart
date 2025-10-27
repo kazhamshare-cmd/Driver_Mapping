@@ -30,7 +30,7 @@ class OfflineGameScreen extends StatefulWidget {
   _OfflineGameScreenState createState() => _OfflineGameScreenState();
 }
 
-class _OfflineGameScreenState extends State<OfflineGameScreen> with TickerProviderStateMixin {
+class _OfflineGameScreenState extends State<OfflineGameScreen> with TickerProviderStateMixin, WidgetsBindingObserver {
   final GameLogicService _gameLogic = GameLogicService.instance;
   final SpeechService _speech = SpeechService.instance;
   final SoundService _sound = SoundService.instance;
@@ -70,6 +70,7 @@ class _OfflineGameScreenState extends State<OfflineGameScreen> with TickerProvid
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _playerCount = widget.playerCount;
     _initializeNameControllers();
     _setupSpeechService();
@@ -98,7 +99,7 @@ class _OfflineGameScreenState extends State<OfflineGameScreen> with TickerProvid
         setState(() {
           _isListening = true;
         });
-        print('🎤 音声認識開始');
+        print('🎤 マイク起動: UIを「音声認識中」に更新');
       }
     };
 
@@ -107,7 +108,7 @@ class _OfflineGameScreenState extends State<OfflineGameScreen> with TickerProvid
         setState(() {
           _isListening = false;
         });
-        print('🎤 音声認識停止');
+        print('🎤 マイク停止: UIを「認識停止」に更新');
 
         // 音声認識が早期に停止した場合、再開する（タイマーがまだ残っている場合）
         if (_gameState == GameState.answering && _answerSeconds > 3.0) {
@@ -153,6 +154,56 @@ class _OfflineGameScreenState extends State<OfflineGameScreen> with TickerProvid
       _bannerAd = null; // 広告をnullに設定してエラーを防ぐ
       setState(() {});
     }
+  }
+
+  @override
+  void dispose() {
+    _countdownTimer?.cancel();
+    _answerTimer?.cancel();
+    _speech.stopListening();
+    WidgetsBinding.instance.removeObserver(this);
+    for (var controller in _nameControllers) {
+      controller.dispose();
+    }
+    _bannerAd?.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    
+    switch (state) {
+      case AppLifecycleState.paused:
+      case AppLifecycleState.inactive:
+      case AppLifecycleState.detached:
+      case AppLifecycleState.hidden:
+        // アプリがバックグラウンドになった時、ゲームを終了
+        print('📱 アプリがバックグラウンドになりました。オフラインゲームを終了します。');
+        _endGameDueToBackground();
+        break;
+      case AppLifecycleState.resumed:
+        // アプリがフォアグラウンドに戻った時
+        print('📱 アプリがフォアグラウンドに戻りました。');
+        break;
+    }
+  }
+
+  /// バックグラウンドによるゲーム終了
+  void _endGameDueToBackground() {
+    // 音声認識を停止
+    _speech.stopListening();
+    
+    // サウンドを停止
+    _sound.stop();
+    
+    // ゲーム状態を終了に設定
+    setState(() {
+      _gameState = GameState.gameOver;
+    });
+    
+    // メニュー画面に戻る
+    Navigator.pop(context);
   }
 
   void _startGame() {
@@ -213,6 +264,10 @@ class _OfflineGameScreenState extends State<OfflineGameScreen> with TickerProvid
   }
 
   void _startCountdown() {
+    // 音声認識リソースを解放
+    _speech.stopListening();
+    _speech.cancel();
+
     setState(() {
       _gameState = GameState.countdown;
       _countdownSeconds = 7.8;
@@ -251,11 +306,11 @@ class _OfflineGameScreenState extends State<OfflineGameScreen> with TickerProvid
       _answerSeconds = 8.0; // ソロプレイと同じ8秒
       _timerProgress = 0.0;
       _recognizedText = '';
-      _isListening = false;
+      // _isListeningはonListeningStartedコールバックで更新される
     });
 
     // 音声認識を開始（ソロプレイと同じ設定）
-    // 遅延を減らすため、awaitを削除
+    // _isListeningの更新はonListeningStartedで行われる
     _speech.startListening(timeout: const Duration(seconds: 8));
 
     const double incrementPerTick = 1 / 80; // 8秒 = 80 * 0.1秒
@@ -293,24 +348,25 @@ class _OfflineGameScreenState extends State<OfflineGameScreen> with TickerProvid
   /// 音声認識を再開する
   Future<void> _restartListening() async {
     if (_gameState != GameState.answering) return;
-    
+
     // 残り時間が短すぎる場合は再開しない
     if (_answerSeconds <= 2.5) {
       print('⚠️ 残り時間が短すぎるため再開をスキップします (残り時間: ${_answerSeconds.toStringAsFixed(1)}秒)');
       return;
     }
-    
+
     print('🔄 音声認識を再開します');
-    
+
     // 音声認識を停止
     await _speech.stopListening();
-    
+    await _speech.cancel(); // リソース解放
+
     // 音声認識結果はリセットしない（言い直しを保持）
     // setState(() {
     //   _recognizedText = '';
     //   _intermediateText = '';
     // });
-    
+
     // 少し待ってから再開
     await Future.delayed(const Duration(milliseconds: 500));
     
@@ -393,13 +449,25 @@ class _OfflineGameScreenState extends State<OfflineGameScreen> with TickerProvid
   void _endGame() async {
     await _sound.playGameOver();
 
-    // インタースティシャル広告を20%の確率で表示
-    if (_ad.isInterstitialAdReady && Random().nextDouble() < 0.2) {
-      await _ad.showInterstitialAd();
-    }
+    // 0.5秒待ってから広告表示
+    await Future.delayed(const Duration(milliseconds: 500));
 
     final winner = _players.reduce((a, b) => a.score > b.score ? a : b);
-    _showGameResultDialog(winner);
+
+    // インタースティシャル広告を20%の確率で表示（広告が閉じられた後にダイアログを表示）
+    if (_ad.isInterstitialAdReady && Random().nextDouble() < 0.2) {
+      await _ad.showInterstitialAd(
+        onAdClosed: () {
+          // 広告が閉じられた後にダイアログを表示
+          if (mounted) {
+            _showGameResultDialog(winner);
+          }
+        },
+      );
+    } else {
+      // 広告を表示しない場合は直接ダイアログを表示
+      _showGameResultDialog(winner);
+    }
   }
 
   @override
@@ -1040,8 +1108,9 @@ class _OfflineGameScreenState extends State<OfflineGameScreen> with TickerProvid
                   ),
                 ),
                 // 時間表示
-                Column(
+                Row(
                   mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(
                       _countdownSeconds.toStringAsFixed(1),
@@ -1051,12 +1120,15 @@ class _OfflineGameScreenState extends State<OfflineGameScreen> with TickerProvid
                         color: Colors.purple.shade700,
                       ),
                     ),
-                    Text(
-                      '秒',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.purple.shade600,
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8, left: 4),
+                      child: Text(
+                        '秒',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.purple.shade600,
+                        ),
                       ),
                     ),
                   ],
@@ -1876,18 +1948,6 @@ class _OfflineGameScreenState extends State<OfflineGameScreen> with TickerProvid
         _playerCount--;
       });
     }
-  }
-
-  @override
-  void dispose() {
-    _countdownTimer?.cancel();
-    _answerTimer?.cancel();
-    _speech.stopListening();
-    _bannerAd?.dispose();
-    for (final controller in _nameControllers) {
-      controller.dispose();
-    }
-    super.dispose();
   }
 
   /// エラーハンドリング付きAdWidgetビルダー

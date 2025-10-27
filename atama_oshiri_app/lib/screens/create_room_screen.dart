@@ -53,10 +53,16 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
       final room = await _roomService.createRoom(request);
 
       if (mounted) {
+        // ホストプレイヤーのIDを取得（最初のプレイヤーがホスト）
+        final hostPlayerId = room.players.first.id;
+
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) => OnlineGameScreen(room: room),
+            builder: (context) => OnlineGameScreen(
+              room: room,
+              currentPlayerId: hostPlayerId,
+            ),
           ),
         );
       }

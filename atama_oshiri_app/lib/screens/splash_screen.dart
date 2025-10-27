@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'menu_screen.dart';
+import '../services/version_check_service.dart';
+import 'force_update_screen.dart';
 
 /// スプラッシュ画面 - 起動時に「株式会社ビーク」を表示
 class SplashScreen extends StatefulWidget {
@@ -25,6 +27,8 @@ class _SplashScreenState extends State<SplashScreen>
   double _loadingProgress = 0.0;
   String _loadingStatus = '初期化中...';
   String _appVersion = '';
+  bool _versionCheckComplete = false;
+  VersionCheckResult? _versionResult;
 
   @override
   void initState() {
@@ -50,8 +54,8 @@ class _SplashScreenState extends State<SplashScreen>
     // アプリバージョンを取得
     _getAppVersion();
 
-    // 初期化処理とナビゲーションを実行
-    _initializeAndNavigate();
+    // バージョンチェックと初期化処理を開始
+    _checkVersionAndInitialize();
   }
 
   Future<void> _getAppVersion() async {
@@ -68,23 +72,107 @@ class _SplashScreenState extends State<SplashScreen>
     }
   }
 
+  /// バージョンチェックと初期化処理
+  Future<void> _checkVersionAndInitialize() async {
+    // バージョンチェックを一時的にスキップして、初期化を優先
+    print('⚠️ バージョンチェックをスキップして初期化を開始');
+    await _initializeAndNavigate();
+
+    // 以下のバージョンチェックコードは一時的に無効化
+    /*
+    try {
+      // バージョンチェックサービスを初期化（タイムアウト付き）
+      _updateProgress(0.1, 'バージョンチェック中...');
+      await VersionCheckService().initialize().timeout(
+        const Duration(seconds: 5),
+        onTimeout: () {
+          print('⏰ バージョンチェック初期化タイムアウト');
+        },
+      );
+
+      // バージョンチェックを実行（タイムアウト付き）
+      _updateProgress(0.2, 'バージョン確認中...');
+      final versionResult = await VersionCheckService().checkVersion().timeout(
+        const Duration(seconds: 3),
+        onTimeout: () {
+          print('⏰ バージョンチェックタイムアウト');
+          return VersionCheckResult(
+            currentVersion: '1.0.0',
+            minRequiredVersion: '1.0.0',
+            isUpdateRequired: false,
+            updateMessage: '',
+            updateUrl: '',
+          );
+        },
+      );
+
+      setState(() {
+        _versionResult = versionResult;
+        _versionCheckComplete = true;
+      });
+
+      // アップデートが必要な場合
+      if (versionResult.isUpdateRequired) {
+        print('🔄 アップデートが必要: ${versionResult.currentVersion} -> ${versionResult.minRequiredVersion}');
+        _showForceUpdateScreen();
+        return;
+      }
+
+      // アップデートが不要な場合は通常の初期化を続行
+      print('✅ バージョンOK: ${versionResult.currentVersion}');
+      await _initializeAndNavigate();
+
+    } catch (e) {
+      print('❌ バージョンチェックエラー: $e');
+      // エラーの場合は通常の初期化を続行
+      await _initializeAndNavigate();
+    }
+    */
+  }
+
+  /// 強制アップデート画面を表示
+  void _showForceUpdateScreen() {
+    if (_versionResult != null) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (context) => ForceUpdateScreen(versionResult: _versionResult!),
+        ),
+      );
+    }
+  }
+
   Future<void> _initializeAndNavigate() async {
     try {
       // 初期化を開始
       print('🚀 スプラッシュ: 初期化開始');
       
-      // 進捗を段階的に更新
-      _updateProgress(0.1, 'Firebase初期化中...');
+      // 進捗を段階的に更新（0から100まで滑らかに）
+      await _animateProgress(0.1, '初期化準備中...');
+      await Future.delayed(const Duration(milliseconds: 100));
+      
+      await _animateProgress(0.2, 'Firebase初期化中...');
       await Future.delayed(const Duration(milliseconds: 200));
       
-      _updateProgress(0.2, '認証サービス初期化中...');
+      await _animateProgress(0.3, '認証サービス初期化中...');
       await Future.delayed(const Duration(milliseconds: 200));
       
-      _updateProgress(0.3, '音声認識サービス初期化中...');
+      await _animateProgress(0.4, '音声認識サービス初期化中...');
       await Future.delayed(const Duration(milliseconds: 200));
       
-      _updateProgress(0.4, '辞書データベース読み込み中...');
-      await Future.delayed(const Duration(milliseconds: 300));
+      await _animateProgress(0.5, '辞書データベース読み込み中...');
+      await Future.delayed(const Duration(milliseconds: 200));
+      
+      await _animateProgress(0.6, '辞書データベース読み込み中...');
+      await Future.delayed(const Duration(milliseconds: 200));
+      
+      await _animateProgress(0.7, '辞書データベース読み込み中...');
+      await Future.delayed(const Duration(milliseconds: 200));
+      
+      await _animateProgress(0.8, '辞書データベース読み込み中...');
+      await Future.delayed(const Duration(milliseconds: 200));
+      
+      await _animateProgress(0.9, '辞書データベース読み込み中...');
+      await Future.delayed(const Duration(milliseconds: 200));
 
       // 初期化とアニメーション時間を並行実行
       final results = await Future.wait([
@@ -100,7 +188,7 @@ class _SplashScreenState extends State<SplashScreen>
         return [null, null];
       });
 
-      _updateProgress(1.0, '初期化完了');
+      await _animateProgress(1.0, '初期化完了');
       print('✅ スプラッシュ: 初期化完了');
 
       if (!mounted) {
@@ -159,6 +247,26 @@ class _SplashScreenState extends State<SplashScreen>
       });
     }
   }
+  
+  /// 進捗を滑らかにアニメーション
+  Future<void> _animateProgress(double targetProgress, String status) async {
+    if (!mounted) return;
+    
+    final currentProgress = _loadingProgress;
+    final steps = 20; // アニメーションのステップ数
+    final stepDuration = const Duration(milliseconds: 50);
+    
+    for (int i = 0; i <= steps; i++) {
+      if (!mounted) return;
+      
+      final progress = currentProgress + (targetProgress - currentProgress) * (i / steps);
+      _updateProgress(progress, status);
+      
+      if (i < steps) {
+        await Future.delayed(stepDuration);
+      }
+    }
+  }
 
   @override
   void dispose() {
@@ -191,7 +299,7 @@ class _SplashScreenState extends State<SplashScreen>
                   '株式会社ビーク',
                   style: TextStyle(
                     fontSize: 20,
-                    fontWeight: FontWeight.w400,
+                    fontWeight: FontWeight.bold,
                     color: Colors.grey.shade700,
                     letterSpacing: 2.0,
                   ),

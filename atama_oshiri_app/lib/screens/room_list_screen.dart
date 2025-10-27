@@ -28,8 +28,8 @@ class _RoomListScreenState extends State<RoomListScreen> {
       }
     });
     
-    // 古いルームのクリーンアップを実行
-    _performCleanup();
+    // クリーンアップ処理は削除（無限ループの原因）
+    // _performCleanup();
   }
 
   Future<void> _performCleanup() async {

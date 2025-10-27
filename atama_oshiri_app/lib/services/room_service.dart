@@ -255,16 +255,46 @@ class RoomService {
         if (kDebugMode) {
           print('ルーム削除: プレイヤーが0人になりました');
         }
-      } else if (leavingPlayer.isHost) {
-        // ホストが退出した場合、新しいホストを選出
-        final newHostRoom = updatedRoom.changeHost();
-        await updateRoom(newHostRoom);
-        if (kDebugMode) {
-          print('ホスト変更: 新しいホストが選出されました');
-        }
       } else {
-        // 通常のプレイヤー退出
-        await updateRoom(updatedRoom);
+        // ゲーム中の場合、残りのアクティブプレイヤー数を確認
+        if (updatedRoom.status == RoomStatus.playing) {
+          final activePlayers = updatedRoom.activePlayers;
+
+          if (activePlayers.length <= 1) {
+            // アクティブプレイヤーが1人以下になった場合、ゲーム終了
+            final finishedRoom = updatedRoom.endGame();
+            await updateRoom(finishedRoom);
+            if (kDebugMode) {
+              print('ゲーム終了: アクティブプレイヤーが1人以下になりました');
+            }
+          } else if (leavingPlayer.isHost) {
+            // ホストが退出した場合、新しいホストを選出してから更新
+            final newHostRoom = updatedRoom.changeHost();
+            await updateRoom(newHostRoom);
+            if (kDebugMode) {
+              print('ホスト変更: 新しいホストが選出されました');
+            }
+          } else {
+            // 通常のプレイヤー退出（ゲーム継続）
+            await updateRoom(updatedRoom);
+            if (kDebugMode) {
+              print('プレイヤー退出: ゲーム継続 (残りアクティブプレイヤー: ${activePlayers.length}人)');
+            }
+          }
+        } else {
+          // 待機中または終了後の退出処理
+          if (leavingPlayer.isHost) {
+            // ホストが退出した場合、新しいホストを選出
+            final newHostRoom = updatedRoom.changeHost();
+            await updateRoom(newHostRoom);
+            if (kDebugMode) {
+              print('ホスト変更: 新しいホストが選出されました');
+            }
+          } else {
+            // 通常のプレイヤー退出
+            await updateRoom(updatedRoom);
+          }
+        }
       }
 
       if (kDebugMode) {
@@ -323,6 +353,34 @@ class RoomService {
     } catch (e) {
       if (kDebugMode) {
         print('ルーム終了エラー: $e');
+      }
+      rethrow;
+    }
+  }
+
+  /// ルームをリセットしてもう一度遊ぶ
+  Future<void> resetRoom(String roomId) async {
+    try {
+      final roomDoc = await _firestore
+          .collection(_roomsCollection)
+          .doc(roomId)
+          .get();
+
+      if (!roomDoc.exists) return;
+
+      final room = Room.fromMap(roomDoc.data()!);
+      final resetRoom = room.resetForReplay();
+      await updateRoom(resetRoom);
+
+      // 使用済みお題もリセット
+      await resetRoomChallenges(roomId);
+
+      if (kDebugMode) {
+        print('ルームリセット成功: $roomId');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('ルームリセットエラー: $e');
       }
       rethrow;
     }

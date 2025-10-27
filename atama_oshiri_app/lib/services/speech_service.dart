@@ -69,8 +69,16 @@ class SpeechService {
           print('❌ 音声認識エラー: ${error.errorMsg}');
           print('💡 シミュレーターでは音声認識が制限される場合があります');
           
-          // エラーを通知（フォールバック機能は削除）
-          onError?.call('音声認識エラー: ${error.errorMsg}');
+          // シミュレーター環境での特別なエラーハンドリング
+          _isRunningOnSimulator().then((isSimulator) {
+            if (isSimulator) {
+              print('📱 シミュレーター環境での音声認識エラー');
+              print('💡 実機でのテストを強く推奨します');
+              onError?.call('シミュレーターでは音声認識が制限されています。実機でテストしてください。');
+            } else {
+              onError?.call('音声認識エラー: ${error.errorMsg}');
+            }
+          });
         },
         onStatus: (status) {
           print('🎤 音声認識ステータス: $status');
@@ -134,10 +142,21 @@ class SpeechService {
       final isSimulator = await _isRunningOnSimulator();
       if (isSimulator) {
         print('📱 シミュレーター環境を検出しました。音声認識設定を最適化します');
+        print('⚠️ シミュレーターでは音声認識が制限される場合があります');
+        print('💡 実機でのテストを強く推奨します');
       } else {
         print('📱 実機環境を検出しました。音声認識精度を最適化します');
         print('💡 実機ではより長い認識時間と詳細な設定を使用します');
       }
+      
+      // シミュレーター環境での特別な設定
+      final listenDuration = isSimulator ?
+        Duration(seconds: 5) : // シミュレーターでは短め
+        (timeout ?? Duration(seconds: 8));
+
+      // pauseForはlistenFor以上に設定して、タイムアウトまで確実に待機
+      // これにより、ユーザーが考えてから最後の1秒で話しても認識される
+      final pauseDuration = listenDuration + Duration(seconds: 1);
       
       await _speech.listen(
         onResult: (result) {
@@ -168,15 +187,17 @@ class SpeechService {
               print('🎤 音声認識結果（ひらがな変換後）: $hiraganaText');
               
               // ひらがな変換後の結果をコールバック（中間結果も含む）
+              print('🎤 [SpeechService] onResultコールバックを呼び出します: $hiraganaText');
+              print('🎤 [SpeechService] onResultプロパティ: ${onResult != null ? "設定済み" : "null"}');
               onResult?.call(hiraganaText);
             });
           }
         },
-        listenFor: timeout ?? Duration(seconds: 8), // UIと完全に同期
-        pauseFor: const Duration(seconds: 2), // UIと完全に同期
+        listenFor: listenDuration,
+        pauseFor: pauseDuration,
         partialResults: true,
         localeId: 'ja_JP',
-        onDevice: true, // 実機ではオンデバイス認識を使用
+        onDevice: !isSimulator, // シミュレーターではオンデバイス認識を無効化
         listenMode: ListenMode.dictation,
         cancelOnError: false,
         listenOptions: SpeechListenOptions(
@@ -185,16 +206,25 @@ class SpeechService {
         ),
         onSoundLevelChange: (level) {
           // 音声レベル変化の処理（必要に応じて）
+          if (isSimulator) {
+            print('🔊 音声レベル: $level (シミュレーター)');
+          }
         },
       );
     } catch (e) {
       print('音声認識開始エラー: $e');
       onError?.call('音声認識の開始に失敗しました');
       
-      // フォールバック機能を無効化（音声認識の精度向上を優先）
-      print('📱 音声認識エラー。フォールバック機能は無効化されています');
-      print('💡 音声認識の精度向上を優先し、自動修正は行いません');
-      onError?.call('音声認識に失敗しました。もう一度お試しください。');
+      // シミュレーター環境での特別なエラーハンドリング
+      final isSimulator = await _isRunningOnSimulator();
+      if (isSimulator) {
+        print('📱 シミュレーター環境での音声認識エラー');
+        print('💡 実機でのテストを強く推奨します');
+        onError?.call('シミュレーターでは音声認識が制限されています。実機でテストしてください。');
+      } else {
+        print('📱 実機環境での音声認識エラー');
+        onError?.call('音声認識に失敗しました。もう一度お試しください。');
+      }
     }
   }
   
@@ -211,27 +241,117 @@ class SpeechService {
     }
   }
   
+  /// シミュレーター環境でのフォールバック機能
+  /// 音声認識が利用できない場合の代替手段を提供
+  Future<String?> showSimulatorFallbackDialog(BuildContext context) async {
+    if (!await _isRunningOnSimulator()) {
+      return null; // 実機ではフォールバック機能は不要
+    }
+    
+    print('📱 シミュレーター環境でのフォールバック機能を表示');
+    
+    // テキスト入力用のコントローラー
+    final textController = TextEditingController();
+    
+    // 簡単なテキスト入力ダイアログを表示
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('音声認識の代替入力'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('シミュレーターでは音声認識が制限されています。'),
+            const SizedBox(height: 16),
+            const Text('手動で回答を入力してください：'),
+            const SizedBox(height: 16),
+            TextField(
+              controller: textController,
+              autofocus: true,
+              decoration: const InputDecoration(
+                hintText: 'ひらがなで入力してください',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('キャンセル'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(context).pop(textController.text);
+            },
+            child: const Text('確定'),
+          ),
+        ],
+      ),
+    );
+    
+    if (result != null && result.isNotEmpty) {
+      print('📱 フォールバック入力: "$result"');
+      // ひらがな変換を適用
+      final hiraganaResult = await _convertToHiragana(result);
+      return hiraganaResult;
+    }
+    
+    return null;
+  }
+  
   // フォールバック機能は完全に削除しました
   
   /// 音声認識を停止
   Future<void> stopListening() async {
     if (!_isListening) return;
-    
+
     try {
       await _speech.stop();
+      _isListening = false;
     } catch (e) {
       print('音声認識停止エラー: $e');
       onError?.call('音声認識の停止に失敗しました');
     }
   }
-  
+
   /// 音声認識をキャンセル
   Future<void> cancel() async {
     try {
       await _speech.cancel();
+      _isListening = false;
+      _recognizedText = '';
+      _intermediateText = '';
     } catch (e) {
       print('音声認識キャンセルエラー: $e');
       onError?.call('音声認識のキャンセルに失敗しました');
+    }
+  }
+
+  /// 音声認識を完全にリセット（連続使用時に推奨）
+  Future<void> reset() async {
+    print('🔄 音声認識を完全にリセット');
+    try {
+      // 1. 停止を試みる
+      if (_isListening) {
+        await _speech.stop();
+      }
+
+      // 2. キャンセルしてリソースを解放
+      await _speech.cancel();
+
+      // 3. 内部状態をクリア
+      _isListening = false;
+      _recognizedText = '';
+      _intermediateText = '';
+      _autoSubmitTimer?.cancel();
+
+      // 4. 少し待機してリソースが完全に解放されるのを待つ（短縮）
+      await Future.delayed(const Duration(milliseconds: 200));
+
+      print('✅ 音声認識リセット完了');
+    } catch (e) {
+      print('⚠️ 音声認識リセットエラー: $e');
     }
   }
   

@@ -9,9 +9,24 @@ import 'game_rules_screen.dart';
 class MenuScreen extends StatelessWidget {
   const MenuScreen({super.key});
 
+  // クラスレベルの静的変数として定義
+  static DateTime? _lastBuildTime;
+
   @override
   Widget build(BuildContext context) {
+    final now = DateTime.now();
+    print('🏠 MenuScreen: buildメソッドが呼ばれました - ${now.millisecondsSinceEpoch}');
+    
+    // 連続呼び出しを検出
+    if (_lastBuildTime != null) {
+      final diff = now.difference(_lastBuildTime!);
+      if (diff.inMilliseconds < 100) {
+        print('⚠️ MenuScreen: 連続呼び出し検出 - 間隔: ${diff.inMilliseconds}ms');
+      }
+    }
+    _lastBuildTime = now;
     return Scaffold(
+      backgroundColor: Colors.white,
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -30,31 +45,13 @@ class MenuScreen extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                // タイトル
-                const Text(
-                  '頭お尻ゲーム',
-                  style: TextStyle(
-                    fontSize: 48,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                    shadows: [
-                      Shadow(
-                        color: Colors.black45,
-                        offset: Offset(2, 2),
-                        blurRadius: 4,
-                      ),
-                    ],
-                  ),
+                // タイトル画像
+                Image.asset(
+                  'assets/images/title_logo.png',
+                  width: MediaQuery.of(context).size.width * 0.85,
+                  fit: BoxFit.contain,
                 ),
-                const SizedBox(height: 16),
-                const Text(
-                  '頭お尻で言葉を繋ごう！',
-                  style: TextStyle(
-                    fontSize: 20,
-                    color: Colors.white70,
-                  ),
-                ),
-                const SizedBox(height: 60),
+                const SizedBox(height: 40),
 
                 // ソロプレイ
                 _MenuButton(
