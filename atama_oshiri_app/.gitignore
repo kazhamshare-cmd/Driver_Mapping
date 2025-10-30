@@ -43,3 +43,9 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Android Keystore files - DO NOT COMMIT!
+*.keystore
+*.jks
+/android/key.properties
+KEYSTORE_INFO.md

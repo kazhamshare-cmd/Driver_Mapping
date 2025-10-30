@@ -1,5 +1,6 @@
 import 'dart:math';
 import '../models/game_models.dart';
+import '../models/room_models.dart';
 import '../models/dictionary_model.dart';
 
 /// 頭お尻ゲームのロジックサービス
@@ -14,7 +15,7 @@ class GameLogicService {
   
   // 重複防止用の履歴
   final List<String> _recentChallenges = []; // 最近のお題を記録
-  static const int maxRecentChallenges = 20; // 直近20個のお題を記録
+  static const int maxRecentChallenges = 5; // 直近5個のお題を記録
 
   // ひらがな一覧（濁音・半濁音は基本形に統一、「ん」を除く）
   static const List<String> _hiraganaList = [
@@ -39,7 +40,11 @@ class GameLogicService {
       final head = _hiraganaList[_random.nextInt(_hiraganaList.length)];
       final tail = _hiraganaList[_random.nextInt(_hiraganaList.length)];
       final challengeKey = '${head}_${tail}';
-      final challenge = Challenge(head: head, tail: tail);
+          final challenge = Challenge(
+            head: head, 
+            tail: tail,
+            examples: [],
+          );
 
       // 直近のお題と重複しないかチェック
       if (!_recentChallenges.contains(challengeKey) && isChallengeValid(challenge)) {
@@ -56,35 +61,15 @@ class GameLogicService {
       attempts++;
     }
 
-    // フォールバック: 最低限の解答例があるお題を探す
-    print('⚠️ 10個以上の解答例があるお題が見つからなかったため、最低限の解答例があるお題を探します');
-    
-    // より緩い条件でお題を探す（5個以上の解答例）
-    for (int i = 0; i < 100; i++) {
-      final head = _hiraganaList[_random.nextInt(_hiraganaList.length)];
-      final tail = _hiraganaList[_random.nextInt(_hiraganaList.length)];
-      final challengeKey = '${head}_${tail}';
-      final challenge = Challenge(head: head, tail: tail);
-      
-      // 直近のお題と重複しないかチェック
-      if (!_recentChallenges.contains(challengeKey)) {
-        final examples = generateAnswerExamples(challenge, limit: 5);
-        if (examples.length >= 5) {
-          _recentChallenges.add(challengeKey);
-          if (_recentChallenges.length > maxRecentChallenges) {
-            _recentChallenges.removeAt(0);
-          }
-          print('🎲 フォールバックお題を生成: 頭=$head, お尻=$tail (解答数: ${examples.length})');
-          return challenge;
-        }
-      }
-    }
-    
-    // 最終フォールバック: 最低限の条件でも見つからない場合は強制的に返す
-    print('🚨 最低限の条件でもお題が見つからなかったため、強制的にお題を返します');
+    // フォールバック: 無効なお題でも返す
+    print('⚠️ 有効なお題が見つからなかったため、ランダムなお題を返します');
     final head = _hiraganaList[_random.nextInt(_hiraganaList.length)];
     final tail = _hiraganaList[_random.nextInt(_hiraganaList.length)];
-    return Challenge(head: head, tail: tail);
+        return Challenge(
+          head: head, 
+          tail: tail,
+          examples: [],
+        );
   }
 
   /// 回答が正しいかチェックし、得点を計算
@@ -232,8 +217,7 @@ class GameLogicService {
       answers: room.answers,
       totalRounds: room.roundNumber - 1,
       finalStandings: finalStandings,
-      playerScores: playerScores,
-      finishedAt: DateTime.now(),
+      completedAt: DateTime.now(),
     );
   }
 
@@ -274,27 +258,15 @@ class GameLogicService {
     final examples = generateAnswerExamples(challenge, limit: 10);
     return examples.length >= 10;
   }
-  
+
+  /// 正解例を取得（不正解時に表示用）
+  List<String> getCorrectExamples({required Challenge challenge, int maxExamples = 3}) {
+    return generateAnswerExamples(challenge, limit: maxExamples);
+  }
+
   /// ゲーム開始時に重複防止履歴をリセット
   void resetRecentChallenges() {
     _recentChallenges.clear();
     print('🔄 お題重複防止履歴をリセットしました');
-  }
-
-  /// お題に対して回答可能な単語の総数を取得
-  int getAvailableAnswersCount(Challenge challenge) {
-    // 辞書から頭文字で始まる単語を取得
-    final wordsWithHead = _dictionary.getWordsStartingWith(challenge.head);
-
-    // お尻の文字で終わる単語の数をカウント
-    int count = 0;
-    for (final word in wordsWithHead) {
-      final lastChar = _dictionary.getLastCharForShiritori(word);
-      if (lastChar == challenge.tail) {
-        count++;
-      }
-    }
-
-    return count;
   }
 }

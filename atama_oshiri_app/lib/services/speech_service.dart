@@ -149,14 +149,12 @@ class SpeechService {
         print('💡 実機ではより長い認識時間と詳細な設定を使用します');
       }
       
-      // シミュレーター環境での特別な設定
-      final listenDuration = isSimulator ?
-        Duration(seconds: 5) : // シミュレーターでは短め
-        (timeout ?? Duration(seconds: 8));
+      // UIの表示時間と完全に一致させる
+      final listenDuration = timeout ?? Duration(seconds: 5);
 
-      // pauseForはlistenFor以上に設定して、タイムアウトまで確実に待機
-      // これにより、ユーザーが考えてから最後の1秒で話しても認識される
-      final pauseDuration = listenDuration + Duration(seconds: 1);
+      // pauseForはlistenForと同じに設定して、UIの表示時間と完全に一致させる
+      // これにより、プライバシーの観点から正確な時間管理を実現
+      final pauseDuration = listenDuration;
       
       await _speech.listen(
         onResult: (result) {

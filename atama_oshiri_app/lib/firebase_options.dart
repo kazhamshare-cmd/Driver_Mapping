@@ -64,7 +64,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '540202646315',
     projectId: 'shiritori-app-442a3',
     storageBucket: 'shiritori-app-442a3.firebasestorage.app',
-    iosBundleId: 'co.jp.b19.atamaoshiriapp',
+    iosBundleId: 'co.jp.b19.shiritori',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(

@@ -1,32 +1,44 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'solo_start_screen.dart';
 import 'offline_game_screen.dart';
 import 'room_list_screen.dart';
 import 'game_rules_screen.dart';
+import '../services/sound_service.dart';
+import '../services/ad_service.dart';
 
 /// メニュー画面 - ゲームモードを選択
-class MenuScreen extends StatelessWidget {
+class MenuScreen extends StatefulWidget {
   const MenuScreen({super.key});
 
-  // クラスレベルの静的変数として定義
-  static DateTime? _lastBuildTime;
+  @override
+  State<MenuScreen> createState() => _MenuScreenState();
+}
+
+class _MenuScreenState extends State<MenuScreen> {
+  final SoundService _sound = SoundService.instance;
+  final AdService _ad = AdService.instance;
+
+  @override
+  void initState() {
+    super.initState();
+    // メニュー画面が表示されたらBGMを再生
+    _sound.playMenuBGM();
+    // バナー広告を読み込み
+    _ad.loadBannerAd();
+  }
+
+  @override
+  void dispose() {
+    // 画面から離れる時はBGMを停止
+    _sound.stopMenuBGM();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final now = DateTime.now();
-    print('🏠 MenuScreen: buildメソッドが呼ばれました - ${now.millisecondsSinceEpoch}');
-    
-    // 連続呼び出しを検出
-    if (_lastBuildTime != null) {
-      final diff = now.difference(_lastBuildTime!);
-      if (diff.inMilliseconds < 100) {
-        print('⚠️ MenuScreen: 連続呼び出し検出 - 間隔: ${diff.inMilliseconds}ms');
-      }
-    }
-    _lastBuildTime = now;
     return Scaffold(
-      backgroundColor: Colors.white,
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -39,19 +51,22 @@ class MenuScreen extends StatelessWidget {
           ),
         ),
         child: SafeArea(
-          child: SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 40),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                // タイトル画像
+          child: Column(
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 40),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                // タイトルロゴ
                 Image.asset(
                   'assets/images/title_logo.png',
                   width: MediaQuery.of(context).size.width * 0.85,
                   fit: BoxFit.contain,
                 ),
-                const SizedBox(height: 40),
+                const SizedBox(height: 60),
 
                 // ソロプレイ
                 _MenuButton(
@@ -120,9 +135,20 @@ class MenuScreen extends StatelessWidget {
                   },
                 ),
                 const SizedBox(height: 20),
-                ],
+                      ],
+                    ),
+                  ),
+                ),
               ),
-            ),
+              // バナー広告
+              if (_ad.bannerAd != null)
+                Container(
+                  color: Colors.black,
+                  width: _ad.bannerAd!.size.width.toDouble(),
+                  height: _ad.bannerAd!.size.height.toDouble(),
+                  child: AdWidget(ad: _ad.bannerAd!),
+                ),
+            ],
           ),
         ),
       ),

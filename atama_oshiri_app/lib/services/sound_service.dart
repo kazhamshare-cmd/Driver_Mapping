@@ -9,6 +9,7 @@ class SoundService {
   SoundService._();
 
   final AudioPlayer _audioPlayer = AudioPlayer();
+  final AudioPlayer _bgmPlayer = AudioPlayer(); // BGM用の別プレイヤー
   bool _isInitialized = false;
 
   /// サービスの初期化
@@ -18,6 +19,7 @@ class SoundService {
     try {
       // AudioPlayerの設定
       await _audioPlayer.setReleaseMode(ReleaseMode.stop);
+      await _bgmPlayer.setReleaseMode(ReleaseMode.loop); // BGMはループ再生
       _isInitialized = true;
       print('✅ SoundService初期化完了');
     } catch (e) {
@@ -112,6 +114,40 @@ class SoundService {
     }
   }
 
+  /// メニューBGMを再生
+  Future<void> playMenuBGM() async {
+    if (!_isInitialized) {
+      await initialize();
+    }
+
+    try {
+      // BGMが既に再生中の場合はスキップ
+      if (_bgmPlayer.state == PlayerState.playing) {
+        print('🔊 メニューBGMは既に再生中です');
+        return;
+      }
+
+      // 音量を少し下げる（0.5 = 50%）
+      await _bgmPlayer.setVolume(0.5);
+
+      // BGMを再生（ループ再生）
+      await _bgmPlayer.play(AssetSource('sounds/menu_bgm.mp3'));
+      print('🔊 メニューBGMを再生開始');
+    } catch (e) {
+      print('❌ メニューBGMの再生エラー: $e');
+    }
+  }
+
+  /// メニューBGMを停止
+  Future<void> stopMenuBGM() async {
+    try {
+      await _bgmPlayer.stop();
+      print('🔇 メニューBGMを停止');
+    } catch (e) {
+      print('❌ メニューBGM停止エラー: $e');
+    }
+  }
+
   /// 音声を停止
   Future<void> stop() async {
     try {
@@ -150,5 +186,6 @@ class SoundService {
   /// リソースの解放
   void dispose() {
     _audioPlayer.dispose();
+    _bgmPlayer.dispose();
   }
 }

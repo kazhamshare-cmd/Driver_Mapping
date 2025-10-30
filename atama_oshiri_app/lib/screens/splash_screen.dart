@@ -1,17 +1,18 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
-import 'package:package_info_plus/package_info_plus.dart';
 import 'menu_screen.dart';
-import '../services/version_check_service.dart';
-import 'force_update_screen.dart';
 
 /// スプラッシュ画面 - 起動時に「株式会社ビーク」を表示
 class SplashScreen extends StatefulWidget {
   final Future<void> Function() onInitialize;
+  final double progress;
+  final String message;
 
   const SplashScreen({
     super.key,
     required this.onInitialize,
+    this.progress = 0.0,
+    this.message = '初期化中...',
   });
 
   @override
@@ -24,11 +25,6 @@ class _SplashScreenState extends State<SplashScreen>
   late Animation<double> _fadeAnimation;
   bool _isInitialized = false;
   bool _animationComplete = false;
-  double _loadingProgress = 0.0;
-  String _loadingStatus = '初期化中...';
-  String _appVersion = '';
-  bool _versionCheckComplete = false;
-  VersionCheckResult? _versionResult;
 
   @override
   void initState() {
@@ -51,128 +47,14 @@ class _SplashScreenState extends State<SplashScreen>
     // アニメーション開始
     _controller.forward();
 
-    // アプリバージョンを取得
-    _getAppVersion();
-
-    // バージョンチェックと初期化処理を開始
-    _checkVersionAndInitialize();
-  }
-
-  Future<void> _getAppVersion() async {
-    try {
-      final packageInfo = await PackageInfo.fromPlatform();
-      setState(() {
-        _appVersion = 'v${packageInfo.version}';
-      });
-    } catch (e) {
-      print('⚠️ バージョン取得エラー: $e');
-      setState(() {
-        _appVersion = 'v1.0.0';
-      });
-    }
-  }
-
-  /// バージョンチェックと初期化処理
-  Future<void> _checkVersionAndInitialize() async {
-    // バージョンチェックを一時的にスキップして、初期化を優先
-    print('⚠️ バージョンチェックをスキップして初期化を開始');
-    await _initializeAndNavigate();
-
-    // 以下のバージョンチェックコードは一時的に無効化
-    /*
-    try {
-      // バージョンチェックサービスを初期化（タイムアウト付き）
-      _updateProgress(0.1, 'バージョンチェック中...');
-      await VersionCheckService().initialize().timeout(
-        const Duration(seconds: 5),
-        onTimeout: () {
-          print('⏰ バージョンチェック初期化タイムアウト');
-        },
-      );
-
-      // バージョンチェックを実行（タイムアウト付き）
-      _updateProgress(0.2, 'バージョン確認中...');
-      final versionResult = await VersionCheckService().checkVersion().timeout(
-        const Duration(seconds: 3),
-        onTimeout: () {
-          print('⏰ バージョンチェックタイムアウト');
-          return VersionCheckResult(
-            currentVersion: '1.0.0',
-            minRequiredVersion: '1.0.0',
-            isUpdateRequired: false,
-            updateMessage: '',
-            updateUrl: '',
-          );
-        },
-      );
-
-      setState(() {
-        _versionResult = versionResult;
-        _versionCheckComplete = true;
-      });
-
-      // アップデートが必要な場合
-      if (versionResult.isUpdateRequired) {
-        print('🔄 アップデートが必要: ${versionResult.currentVersion} -> ${versionResult.minRequiredVersion}');
-        _showForceUpdateScreen();
-        return;
-      }
-
-      // アップデートが不要な場合は通常の初期化を続行
-      print('✅ バージョンOK: ${versionResult.currentVersion}');
-      await _initializeAndNavigate();
-
-    } catch (e) {
-      print('❌ バージョンチェックエラー: $e');
-      // エラーの場合は通常の初期化を続行
-      await _initializeAndNavigate();
-    }
-    */
-  }
-
-  /// 強制アップデート画面を表示
-  void _showForceUpdateScreen() {
-    if (_versionResult != null) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (context) => ForceUpdateScreen(versionResult: _versionResult!),
-        ),
-      );
-    }
+    // 初期化処理とナビゲーションを実行
+    _initializeAndNavigate();
   }
 
   Future<void> _initializeAndNavigate() async {
     try {
       // 初期化を開始
       print('🚀 スプラッシュ: 初期化開始');
-      
-      // 進捗を段階的に更新（0から100まで滑らかに）
-      await _animateProgress(0.1, '初期化準備中...');
-      await Future.delayed(const Duration(milliseconds: 100));
-      
-      await _animateProgress(0.2, 'Firebase初期化中...');
-      await Future.delayed(const Duration(milliseconds: 200));
-      
-      await _animateProgress(0.3, '認証サービス初期化中...');
-      await Future.delayed(const Duration(milliseconds: 200));
-      
-      await _animateProgress(0.4, '音声認識サービス初期化中...');
-      await Future.delayed(const Duration(milliseconds: 200));
-      
-      await _animateProgress(0.5, '辞書データベース読み込み中...');
-      await Future.delayed(const Duration(milliseconds: 200));
-      
-      await _animateProgress(0.6, '辞書データベース読み込み中...');
-      await Future.delayed(const Duration(milliseconds: 200));
-      
-      await _animateProgress(0.7, '辞書データベース読み込み中...');
-      await Future.delayed(const Duration(milliseconds: 200));
-      
-      await _animateProgress(0.8, '辞書データベース読み込み中...');
-      await Future.delayed(const Duration(milliseconds: 200));
-      
-      await _animateProgress(0.9, '辞書データベース読み込み中...');
-      await Future.delayed(const Duration(milliseconds: 200));
 
       // 初期化とアニメーション時間を並行実行
       final results = await Future.wait([
@@ -188,7 +70,6 @@ class _SplashScreenState extends State<SplashScreen>
         return [null, null];
       });
 
-      await _animateProgress(1.0, '初期化完了');
       print('✅ スプラッシュ: 初期化完了');
 
       if (!mounted) {
@@ -239,35 +120,6 @@ class _SplashScreenState extends State<SplashScreen>
     }
   }
 
-  void _updateProgress(double progress, String status) {
-    if (mounted) {
-      setState(() {
-        _loadingProgress = progress;
-        _loadingStatus = status;
-      });
-    }
-  }
-  
-  /// 進捗を滑らかにアニメーション
-  Future<void> _animateProgress(double targetProgress, String status) async {
-    if (!mounted) return;
-    
-    final currentProgress = _loadingProgress;
-    final steps = 20; // アニメーションのステップ数
-    final stepDuration = const Duration(milliseconds: 50);
-    
-    for (int i = 0; i <= steps; i++) {
-      if (!mounted) return;
-      
-      final progress = currentProgress + (targetProgress - currentProgress) * (i / steps);
-      _updateProgress(progress, status);
-      
-      if (i < steps) {
-        await Future.delayed(stepDuration);
-      }
-    }
-  }
-
   @override
   void dispose() {
     _controller.dispose();
@@ -299,77 +151,44 @@ class _SplashScreenState extends State<SplashScreen>
                   '株式会社ビーク',
                   style: TextStyle(
                     fontSize: 20,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w400,
                     color: Colors.grey.shade700,
                     letterSpacing: 2.0,
                   ),
                 ),
                 const SizedBox(height: 40),
-                
-                // 読み込み進捗バー
-                Container(
-                  width: 280,
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
+
+                // プログレスバー
+                SizedBox(
+                  width: 200,
                   child: Column(
                     children: [
-                      // 読み込みステータス
-                      Text(
-                        _loadingStatus,
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.grey.shade700,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      
-                      // プログレスバー
                       LinearProgressIndicator(
-                        value: _loadingProgress,
+                        value: widget.progress,
                         backgroundColor: Colors.grey.shade300,
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          Colors.deepPurple.shade400,
-                        ),
-                        minHeight: 8,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.deepPurple.shade400),
+                        minHeight: 6,
                       ),
                       const SizedBox(height: 12),
-                      
-                      // 進捗パーセンテージ
                       Text(
-                        '${(_loadingProgress * 100).toInt()}%',
+                        widget.message,
                         style: TextStyle(
                           fontSize: 14,
-                          fontWeight: FontWeight.w500,
                           color: Colors.grey.shade600,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${(widget.progress * 100).toInt()}%',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.deepPurple.shade600,
                         ),
                       ),
                     ],
                   ),
                 ),
-                
-                const SizedBox(height: 20),
-                
-                // アプリバージョン
-                if (_appVersion.isNotEmpty)
-                  Text(
-                    _appVersion,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w400,
-                      color: Colors.grey.shade500,
-                    ),
-                  ),
               ],
             ),
           ),

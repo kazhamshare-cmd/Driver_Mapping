@@ -84,7 +84,7 @@ class SoloStartScreen extends StatelessWidget {
                       _GameStep(
                         step: '2',
                         title: 'カウントダウン',
-                        description: '7.8秒のカウントダウンが始まります',
+                        description: '7.9秒のカウントダウンが始まります',
                       ),
                       _GameStep(
                         step: '3',

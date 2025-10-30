@@ -28,8 +28,8 @@ class _RoomListScreenState extends State<RoomListScreen> {
       }
     });
     
-    // クリーンアップ処理は削除（無限ループの原因）
-    // _performCleanup();
+    // 古いルームのクリーンアップを実行
+    _performCleanup();
   }
 
   Future<void> _performCleanup() async {
@@ -143,7 +143,6 @@ class _RoomListScreenState extends State<RoomListScreen> {
                         stream: _roomService.getRooms(),
                         builder: (context, snapshot) {
                           if (snapshot.hasError) {
-                            print('ルーム一覧取得エラー: ${snapshot.error}');
                             return Center(
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
@@ -154,37 +153,21 @@ class _RoomListScreenState extends State<RoomListScreen> {
                                     size: 48,
                                   ),
                                   const SizedBox(height: 16),
-                                  const Text(
+                                  Text(
                                     'エラーが発生しました',
-                                    style: TextStyle(
+                                    style: const TextStyle(
                                       fontSize: 18,
                                       color: Colors.white,
                                     ),
                                   ),
                                   const SizedBox(height: 8),
                                   Text(
-                                    'ルーム一覧の取得に失敗しました。\nしばらく待ってから再試行してください。',
+                                    snapshot.error.toString(),
                                     style: const TextStyle(
                                       fontSize: 14,
                                       color: Colors.white70,
                                     ),
                                     textAlign: TextAlign.center,
-                                  ),
-                                  const SizedBox(height: 16),
-                                  ElevatedButton(
-                                    onPressed: () {
-                                      setState(() {
-                                        _isLoading = true;
-                                      });
-                                      Future.delayed(const Duration(seconds: 1), () {
-                                        if (mounted) {
-                                          setState(() {
-                                            _isLoading = false;
-                                          });
-                                        }
-                                      });
-                                    },
-                                    child: const Text('再試行'),
                                   ),
                                 ],
                               ),

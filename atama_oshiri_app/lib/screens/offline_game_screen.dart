@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import 'dart:math';
 import '../models/game_models.dart';
+import '../models/room_models.dart';
 import '../services/game_logic_service.dart';
 import '../services/speech_service.dart';
 import '../services/sound_service.dart';
@@ -49,7 +50,7 @@ class _OfflineGameScreenState extends State<OfflineGameScreen> with TickerProvid
 
   // 新しいゲーム状態管理
   GameState _gameState = GameState.ready;
-  double _countdownSeconds = 7.8;
+  double _countdownSeconds = 7.9;
   double _answerSeconds = 5.0;
   double _timerProgress = 0.0;
   Timer? _countdownTimer;
@@ -111,7 +112,7 @@ class _OfflineGameScreenState extends State<OfflineGameScreen> with TickerProvid
         print('🎤 マイク停止: UIを「認識停止」に更新');
 
         // 音声認識が早期に停止した場合、再開する（タイマーがまだ残っている場合）
-        if (_gameState == GameState.answering && _answerSeconds > 3.0) {
+        if (_gameState == GameState.answering && _answerSeconds > 1.0) {
           print('⚠️ 音声認識が早期停止 - 再開します (残り時間: ${_answerSeconds.toStringAsFixed(1)}秒)');
           _restartListening();
         }
@@ -218,6 +219,8 @@ class _OfflineGameScreenState extends State<OfflineGameScreen> with TickerProvid
       return Player(
         id: 'player_$index',
         name: _nameControllers[index].text,
+        isHost: false,
+        joinedAt: DateTime.now(),
         status: PlayerStatus.playing,
         score: 0,
         wordCount: 0,
@@ -249,7 +252,7 @@ class _OfflineGameScreenState extends State<OfflineGameScreen> with TickerProvid
     setState(() {
       _gameState = GameState.ready;
       _recognizedText = '';
-      _countdownSeconds = 7.8;
+      _countdownSeconds = 7.9;
       _answerSeconds = 8.0; // 8秒に統一
       _timerProgress = 0.0;
       _isListening = false;
@@ -270,13 +273,13 @@ class _OfflineGameScreenState extends State<OfflineGameScreen> with TickerProvid
 
     setState(() {
       _gameState = GameState.countdown;
-      _countdownSeconds = 7.8;
+      _countdownSeconds = 7.9;
       _timerProgress = 0.0;
     });
 
     _sound.playCountdown10sec();
 
-    const double incrementPerTick = 1 / 78; // 7.8秒 = 78 * 0.1秒
+    const double incrementPerTick = 1 / 79; // 7.9秒 = 79 * 0.1秒
     _countdownTimer = Timer.periodic(const Duration(milliseconds: 100), (timer) {
       if (!mounted) {
         timer.cancel();
@@ -350,7 +353,7 @@ class _OfflineGameScreenState extends State<OfflineGameScreen> with TickerProvid
     if (_gameState != GameState.answering) return;
 
     // 残り時間が短すぎる場合は再開しない
-    if (_answerSeconds <= 2.5) {
+    if (_answerSeconds <= 1.0) {
       print('⚠️ 残り時間が短すぎるため再開をスキップします (残り時間: ${_answerSeconds.toStringAsFixed(1)}秒)');
       return;
     }
@@ -370,9 +373,9 @@ class _OfflineGameScreenState extends State<OfflineGameScreen> with TickerProvid
     // 少し待ってから再開
     await Future.delayed(const Duration(milliseconds: 500));
     
-    if (mounted && _gameState == GameState.answering && _answerSeconds > 2.5) {
-      // 残り時間を計算
-      final remainingSeconds = _answerSeconds.ceil().clamp(2, 8);
+    if (mounted && _gameState == GameState.answering && _answerSeconds > 1.0) {
+      // 残り時間を計算（UIの表示時間と完全に一致）
+      final remainingSeconds = _answerSeconds.ceil().clamp(1, 8);
       print('🎤 音声認識を再開します（残り時間: ${remainingSeconds}秒）');
       
       // 音声認識を再開
@@ -410,8 +413,10 @@ class _OfflineGameScreenState extends State<OfflineGameScreen> with TickerProvid
       _sound.playCorrect();
       setState(() {
         _usedWords.add(_recognizedText);
-        _players[_currentPlayerIndex].score += points;
-        _players[_currentPlayerIndex].wordCount++;
+        // スコアと単語数を更新
+        _players[_currentPlayerIndex] = _players[_currentPlayerIndex]
+            .updateScore(_players[_currentPlayerIndex].score + points)
+            .updateWordCount(_players[_currentPlayerIndex].wordCount + 1);
         _gameState = GameState.showResult;
       });
 
@@ -419,6 +424,9 @@ class _OfflineGameScreenState extends State<OfflineGameScreen> with TickerProvid
       Future.delayed(const Duration(seconds: 2), () {
         if (mounted) {
           _moveToNextPlayer();
+          // 新しいお題を生成
+          _currentChallenge = _gameLogic.generateChallenge();
+          print('🎲 新しいお題を生成: 頭=${_currentChallenge!.head}, お尻=${_currentChallenge!.tail}');
           _startTurn();
         }
       });
@@ -426,8 +434,9 @@ class _OfflineGameScreenState extends State<OfflineGameScreen> with TickerProvid
       // 不正解処理
       _sound.playIncorrect();
 
-      // プレイヤーを脱落させる
-      _players[_currentPlayerIndex].status = PlayerStatus.eliminated;
+        // プレイヤーを脱落させる
+        _players[_currentPlayerIndex] = _players[_currentPlayerIndex]
+            .updateStatus(PlayerStatus.eliminated);
 
       // 即座に脱落ダイアログを表示（回答例付き）
       _showEliminationDialog(_players[_currentPlayerIndex], message);
@@ -437,12 +446,25 @@ class _OfflineGameScreenState extends State<OfflineGameScreen> with TickerProvid
   void _moveToNextPlayer() {
     // 次のアクティブなプレイヤーを探す
     int nextIndex = (_currentPlayerIndex + 1) % _players.length;
-    while (_players[nextIndex].status != PlayerStatus.playing) {
+    int attempts = 0;
+    
+    while (_players[nextIndex].status != PlayerStatus.playing && attempts < _players.length) {
       nextIndex = (nextIndex + 1) % _players.length;
+      attempts++;
     }
+    
+    // アクティブなプレイヤーが見つからない場合はゲーム終了
+    if (attempts >= _players.length) {
+      print('🏁 アクティブなプレイヤーがいません。ゲーム終了');
+      _endGame();
+      return;
+    }
+    
     setState(() {
       _currentPlayerIndex = nextIndex;
     });
+    
+    print('▶️ 次のプレイヤー: ${_players[nextIndex].name} (インデックス: $nextIndex)');
   }
 
 
@@ -456,14 +478,11 @@ class _OfflineGameScreenState extends State<OfflineGameScreen> with TickerProvid
 
     // インタースティシャル広告を20%の確率で表示（広告が閉じられた後にダイアログを表示）
     if (_ad.isInterstitialAdReady && Random().nextDouble() < 0.2) {
-      await _ad.showInterstitialAd(
-        onAdClosed: () {
-          // 広告が閉じられた後にダイアログを表示
-          if (mounted) {
-            _showGameResultDialog(winner);
-          }
-        },
-      );
+      await _ad.showInterstitialAd();
+      // 広告が閉じられた後にダイアログを表示
+      if (mounted) {
+        _showGameResultDialog(winner);
+      }
     } else {
       // 広告を表示しない場合は直接ダイアログを表示
       _showGameResultDialog(winner);
@@ -1818,14 +1837,10 @@ class _OfflineGameScreenState extends State<OfflineGameScreen> with TickerProvid
                     width: double.infinity,
                     child: ElevatedButton(
                       onPressed: () {
-                        Navigator.pop(context);
+                        Navigator.pop(context); // ダイアログを閉じる
                         setState(() {
                           // プレイヤーをリセット（名前は保持、スコアと状態をリセット）
-                          for (var player in _players) {
-                            player.score = 0;
-                            player.wordCount = 0;
-                            player.status = PlayerStatus.playing;
-                          }
+                          _players = _players.map((player) => player.reset()).toList();
                           _currentPlayerIndex = 0;
                           _usedWords.clear();
                           _currentChallenge = _gameLogic.generateChallenge();

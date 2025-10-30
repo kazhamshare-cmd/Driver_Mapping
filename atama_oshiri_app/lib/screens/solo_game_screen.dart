@@ -3,6 +3,7 @@ import 'package:uuid/uuid.dart';
 import 'dart:async';
 import 'dart:math';
 import '../models/game_models.dart';
+import '../models/room_models.dart';
 import '../models/dictionary_model.dart';
 import '../services/game_logic_service.dart';
 import '../services/speech_service.dart';
@@ -49,7 +50,7 @@ class _SoloGameScreenState extends State<SoloGameScreen> with WidgetsBindingObse
   // タイマー関連
   Timer? _countdownTimer;
   Timer? _answerTimer;
-  double _countdownSeconds = 7.8;
+  double _countdownSeconds = 7.9;
   double _answerSeconds = 5.0;
   double _timerProgress = 0.0;
 
@@ -182,7 +183,11 @@ class _SoloGameScreenState extends State<SoloGameScreen> with WidgetsBindingObse
     _player = Player(
       id: const Uuid().v4(),
       name: 'プレイヤー',
+      isHost: false,
+      joinedAt: DateTime.now(),
       status: PlayerStatus.playing,
+      score: 0,
+      wordCount: 0,
     );
     
     // お題重複防止履歴をリセット
@@ -210,7 +215,7 @@ class _SoloGameScreenState extends State<SoloGameScreen> with WidgetsBindingObse
       // 完全にリセット
       _gameState = GameState.ready;
       _recognizedText = '';
-      _countdownSeconds = 7.8;
+      _countdownSeconds = 7.9;
       _answerSeconds = 5.0;
       _timerProgress = 0.0;
       _isListening = false;
@@ -235,20 +240,20 @@ class _SoloGameScreenState extends State<SoloGameScreen> with WidgetsBindingObse
 
     setState(() {
       _gameState = GameState.countdown;
-      _countdownSeconds = 7.8;
+      _countdownSeconds = 7.9;
       _timerProgress = 0.0;
       _isListening = false;
       _recognizedText = '';
     });
 
-    // 10秒BGMを再生（7.8秒カウントダウンだが、BGMは継続）
+    // 10秒BGMを再生（7.9秒カウントダウンだが、BGMは継続）
     _sound.playCountdown10sec();
 
-    // カウントダウンタイマー（7.8秒）
+    // カウントダウンタイマー（7.9秒）
     _countdownTimer = Timer.periodic(const Duration(milliseconds: 100), (timer) {
       setState(() {
-        _timerProgress += 0.01282; // 7.8秒で1.0 (1/78 = 0.01282)
-        _countdownSeconds = 7.8 - (_timerProgress * 7.8);
+        _timerProgress += 0.01266; // 7.9秒で1.0 (1/79 = 0.01266)
+        _countdownSeconds = 7.9 - (_timerProgress * 7.9);
 
         if (_countdownSeconds <= 0) {
           timer.cancel();
@@ -348,15 +353,15 @@ class _SoloGameScreenState extends State<SoloGameScreen> with WidgetsBindingObse
     // 少し待ってから再開
     await Future.delayed(const Duration(milliseconds: 500));
     
-    // 残り時間に応じたタイムアウトで再開
-    try {
-      final remainingSeconds = (_answerSeconds.ceil()).clamp(2, 5); // 最低2秒、最大5秒
-      print('🎤 音声認識を再開します（残り時間: ${_answerSeconds.toStringAsFixed(1)}秒 → ${remainingSeconds}秒）');
-      print('🎤 期待される頭文字: "${_currentChallenge.head}"');
-      await _speech.startListening(
-        timeout: Duration(seconds: remainingSeconds),
-        expectedHead: _currentChallenge.head,
-      );
+      // 残り時間に応じたタイムアウトで再開（UIの表示時間と完全に一致）
+      try {
+        final remainingSeconds = _answerSeconds.ceil().clamp(1, 5); // UIの表示時間と完全に一致
+        print('🎤 音声認識を再開します（残り時間: ${_answerSeconds.toStringAsFixed(1)}秒 → ${remainingSeconds}秒）');
+        print('🎤 期待される頭文字: "${_currentChallenge.head}"');
+        await _speech.startListening(
+          timeout: Duration(seconds: remainingSeconds),
+          expectedHead: _currentChallenge.head,
+        );
       setState(() {
         _isListening = true;
       });
@@ -432,17 +437,19 @@ class _SoloGameScreenState extends State<SoloGameScreen> with WidgetsBindingObse
     if (_isCorrect) {
       // 正解
       _score += points;
-      _player.score += points;
-      _player.wordCount++;
+      // スコアと単語数を更新
+      _player = _player
+          .updateScore(_player.score + points)
+          .updateWordCount(_player.wordCount + 1);
       _usedWords.add(_recognizedText);
 
       _answers.add(Answer(
         word: _recognizedText,
+        isCorrect: true,
         playerId: _player.id,
         playerName: _player.name,
         points: points,
-        challenge: _currentChallenge,
-        timestamp: DateTime.now(),
+        answeredAt: DateTime.now(),
       ));
 
       // 正解時: 他の解答例を3つ取得（自分の回答を除く）
@@ -560,14 +567,11 @@ class _SoloGameScreenState extends State<SoloGameScreen> with WidgetsBindingObse
 
     // インタースティシャル広告を20%の確率で表示（広告が閉じられた後にダイアログを表示）
     if (_ad.isInterstitialAdReady && Random().nextDouble() < 0.2) {
-      await _ad.showInterstitialAd(
-        onAdClosed: () {
-          // 広告が閉じられた後にダイアログを表示
-          if (mounted) {
-            _showGameOverDialogContent();
-          }
-        },
-      );
+      await _ad.showInterstitialAd();
+      // 広告が閉じられた後にダイアログを表示
+      if (mounted) {
+        _showGameOverDialogContent();
+      }
     } else {
       // 広告を表示しない場合は直接ダイアログを表示
       _showGameOverDialogContent();
@@ -859,11 +863,15 @@ class _SoloGameScreenState extends State<SoloGameScreen> with WidgetsBindingObse
       _score = 0;
       _usedWords.clear();
       _answers.clear();
-      _player = Player(
-        id: const Uuid().v4(),
-        name: 'プレイヤー',
-        status: PlayerStatus.playing,
-      );
+          _player = Player(
+            id: const Uuid().v4(),
+            name: 'プレイヤー',
+            isHost: false,
+            joinedAt: DateTime.now(),
+            status: PlayerStatus.playing,
+            score: 0,
+            wordCount: 0,
+          );
       _startNewRound();
     });
   }

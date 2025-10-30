@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'package:flutter/foundation.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 /// AdMob広告サービス
@@ -84,8 +83,7 @@ class AdService {
   }
 
   /// インタースティシャル広告を表示
-  /// [onAdClosed] 広告が閉じられた後に実行されるコールバック
-  Future<void> showInterstitialAd({VoidCallback? onAdClosed}) async {
+  Future<void> showInterstitialAd() async {
     if (_interstitialAd != null && _isInterstitialAdReady) {
       _interstitialAd!.fullScreenContentCallback = FullScreenContentCallback(
         onAdShowedFullScreenContent: (ad) {
@@ -98,24 +96,18 @@ class AdService {
           _isInterstitialAdReady = false;
           // 次の広告を読み込み
           loadInterstitialAd();
-          // コールバックを実行
-          onAdClosed?.call();
         },
         onAdFailedToShowFullScreenContent: (ad, error) {
           print('インタースティシャル広告表示失敗: $error');
           ad.dispose();
           _interstitialAd = null;
           _isInterstitialAdReady = false;
-          // 失敗時もコールバックを実行
-          onAdClosed?.call();
         },
       );
 
       await _interstitialAd!.show();
     } else {
       print('インタースティシャル広告が準備できていません');
-      // 広告が準備できていない場合も即座にコールバックを実行
-      onAdClosed?.call();
     }
   }
 

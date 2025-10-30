@@ -58,17 +58,32 @@ class RoomService {
   /// ルーム作成
   Future<Room> createRoom(CreateRoomRequest request) async {
     try {
+      if (kDebugMode) {
+        print('🎮 [RoomService] createRoom開始 - GameMode: ${request.gameMode.name}, TotalRounds: ${request.totalRounds}');
+      }
+
       final room = Room.create(
         name: request.roomName,
         hostName: request.hostName,
         password: request.password,
         maxPlayers: request.maxPlayers,
+        gameMode: request.gameMode,
+        totalRounds: request.totalRounds,
       );
+
+      if (kDebugMode) {
+        print('🎮 [RoomService] Room.create完了 - GameMode: ${room.gameMode.name}, TotalRounds: ${room.totalRounds}');
+      }
+
+      final roomMap = room.toMap();
+      if (kDebugMode) {
+        print('🎮 [RoomService] toMap完了 - GameMode: ${roomMap['gameMode']}, TotalRounds: ${roomMap['totalRounds']}');
+      }
 
       await _firestore
           .collection(_roomsCollection)
           .doc(room.id)
-          .set(room.toMap());
+          .set(roomMap);
 
       // ルーム作成時に使用済みお題をリセット
       await resetRoomChallenges(room.id);
@@ -334,7 +349,7 @@ class RoomService {
   }
 
   /// ルーム終了
-  Future<void> endRoom(String roomId) async {
+  Future<void> endRoom(String roomId, {bool? shouldShowAd}) async {
     try {
       final roomDoc = await _firestore
           .collection(_roomsCollection)
@@ -344,11 +359,34 @@ class RoomService {
       if (!roomDoc.exists) return;
 
       final room = Room.fromMap(roomDoc.data()!);
-      final endedRoom = room.endGame();
+      var endedRoom = room.endGame();
+
+      // ホストが広告フラグを指定した場合は設定
+      if (shouldShowAd != null) {
+        endedRoom = Room(
+          id: endedRoom.id,
+          name: endedRoom.name,
+          hostName: endedRoom.hostName,
+          password: endedRoom.password,
+          createdAt: endedRoom.createdAt,
+          updatedAt: endedRoom.updatedAt,
+          players: endedRoom.players,
+          status: endedRoom.status,
+          maxPlayers: endedRoom.maxPlayers,
+          currentChallenge: endedRoom.currentChallenge,
+          currentPlayerIndex: endedRoom.currentPlayerIndex,
+          usedWords: endedRoom.usedWords,
+          gameMode: endedRoom.gameMode,
+          totalRounds: endedRoom.totalRounds,
+          currentRound: endedRoom.currentRound,
+          shouldShowAd: shouldShowAd,
+        );
+      }
+
       await updateRoom(endedRoom);
 
       if (kDebugMode) {
-        print('ルーム終了成功: $roomId');
+        print('ルーム終了成功: $roomId (広告表示: ${endedRoom.shouldShowAd})');
       }
     } catch (e) {
       if (kDebugMode) {
@@ -359,7 +397,7 @@ class RoomService {
   }
 
   /// ルームをリセットしてもう一度遊ぶ
-  Future<void> resetRoom(String roomId) async {
+  Future<void> resetRoom(String roomId, {bool shouldShowAd = false}) async {
     try {
       final roomDoc = await _firestore
           .collection(_roomsCollection)
@@ -369,14 +407,35 @@ class RoomService {
       if (!roomDoc.exists) return;
 
       final room = Room.fromMap(roomDoc.data()!);
-      final resetRoom = room.resetForReplay();
+      var resetRoom = room.resetForReplay();
+
+      // 広告表示フラグを設定（ホストが決定した値）
+      resetRoom = Room(
+        id: resetRoom.id,
+        name: resetRoom.name,
+        hostName: resetRoom.hostName,
+        password: resetRoom.password,
+        createdAt: resetRoom.createdAt,
+        updatedAt: resetRoom.updatedAt,
+        players: resetRoom.players,
+        status: resetRoom.status,
+        maxPlayers: resetRoom.maxPlayers,
+        currentChallenge: resetRoom.currentChallenge,
+        currentPlayerIndex: resetRoom.currentPlayerIndex,
+        usedWords: resetRoom.usedWords,
+        gameMode: resetRoom.gameMode,
+        totalRounds: resetRoom.totalRounds,
+        currentRound: resetRoom.currentRound,
+        shouldShowAd: shouldShowAd, // ホストが決定した広告表示フラグ
+      );
+
       await updateRoom(resetRoom);
 
       // 使用済みお題もリセット
       await resetRoomChallenges(roomId);
 
       if (kDebugMode) {
-        print('ルームリセット成功: $roomId');
+        print('ルームリセット成功: $roomId (広告表示: $shouldShowAd)');
       }
     } catch (e) {
       if (kDebugMode) {
@@ -535,6 +594,24 @@ class RoomService {
     } catch (e) {
       if (kDebugMode) {
         print('ルーム使用済みお題リセットエラー: $e');
+      }
+    }
+  }
+
+  /// 音声認識結果を更新
+  Future<void> updateSpeechResult(String roomId, String speechResult) async {
+    try {
+      await _firestore.collection(_roomsCollection).doc(roomId).update({
+        'currentSpeechResult': speechResult,
+        'updatedAt': DateTime.now().toIso8601String(),
+      });
+      
+      if (kDebugMode) {
+        print('音声認識結果を更新: $roomId - $speechResult');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('音声認識結果更新エラー: $e');
       }
     }
   }

@@ -27,6 +27,7 @@ class _OnlineGameScreenState extends State<OnlineGameScreen> {
   void initState() {
     super.initState();
     _roomStream = _roomService.getRoom(widget.room.id);
+    _isNavigating = false; // 画面遷移フラグをリセット
 
     // ルームの生存確認を実行
     _checkRoomHealth();
@@ -82,29 +83,50 @@ class _OnlineGameScreenState extends State<OnlineGameScreen> {
                 return _buildRoomNotFoundScreen();
               }
 
+              // ホストが退出したかチェック（ゲスト専用）
+              final isHost = room.players.any((p) => p.id == widget.currentPlayerId && p.isHost);
+              if (!isHost) {
+                final hostExists = room.players.any((p) => p.isHost);
+                if (!hostExists && !_isNavigating) {
+                  _isNavigating = true;
+                  Future.microtask(() {
+                    if (mounted) {
+                      _showHostLeftDialog();
+                    }
+                  });
+                  return const Center(
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                    ),
+                  );
+                }
+              }
+
               // ルームステータスがplayingになったら、ゲーム画面に自動遷移
               print('🎮 [準備画面] ルームステータス: ${room.status}, 遷移フラグ: $_isNavigating');
-              if (room.status == RoomStatus.playing && !_isNavigating) {
-                print('🎮 [準備画面] ゲーム画面への遷移を開始します');
-                _isNavigating = true; // 遷移フラグを設定
-                
-                // 即座に画面遷移を実行
-                Future.microtask(() {
-                  if (mounted) {
-                    print('🎮 [準備画面] Navigator.pushReplacementを実行します');
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => OnlineGamePlayScreen(
-                          room: room,
-                          currentPlayerId: widget.currentPlayerId,
+              if (room.status == RoomStatus.playing) {
+                if (!_isNavigating) {
+                  print('🎮 [準備画面] ゲーム画面への遷移を開始します');
+                  _isNavigating = true; // 遷移フラグを設定
+                  
+                  // 即座に画面遷移を実行
+                  Future.microtask(() {
+                    if (mounted) {
+                      print('🎮 [準備画面] Navigator.pushReplacementを実行します');
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => OnlineGamePlayScreen(
+                            room: room,
+                            currentPlayerId: widget.currentPlayerId,
+                          ),
                         ),
-                      ),
-                    );
-                  }
-                });
-              } else if (room.status == RoomStatus.playing && _isNavigating) {
-                print('🎮 [準備画面] 既に遷移中です - スキップ');
+                      );
+                    }
+                  });
+                } else {
+                  print('🎮 [準備画面] 既に遷移中です - スキップ');
+                }
               }
 
               return _buildGameScreen(room);
@@ -491,6 +513,44 @@ class _OnlineGameScreenState extends State<OnlineGameScreen> {
                 ),
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// ホスト退出ダイアログを表示
+  void _showHostLeftDialog() {
+    if (!mounted) return;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.warning, color: Colors.orange),
+            SizedBox(width: 10),
+            Text('ホストが退出しました'),
+          ],
+        ),
+        content: const Text('ホストプレイヤーが退出したため、ルームを退出します。'),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context); // ダイアログを閉じる
+              Navigator.pop(context); // 準備画面を閉じる
+
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('ホストが退出したため、ルームを退出しました'),
+                    backgroundColor: Colors.orange,
+                  ),
+                );
+              }
+            },
+            child: const Text('OK'),
           ),
         ],
       ),
