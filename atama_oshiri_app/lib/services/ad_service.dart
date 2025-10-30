@@ -25,6 +25,7 @@ class AdService {
   bool _isInitialized = false;
   InterstitialAd? _interstitialAd;
   bool _isInterstitialAdReady = false;
+  BannerAd? _bannerAd;
 
   /// AdMobを初期化
   Future<void> initialize() async {
@@ -114,10 +115,35 @@ class AdService {
   /// インタースティシャル広告が準備できているかチェック
   bool get isInterstitialAdReady => _isInterstitialAdReady;
 
+  /// バナー広告を読み込み
+  void loadBannerAd() {
+    _bannerAd?.dispose();
+    _bannerAd = BannerAd(
+      adUnitId: getBannerAdUnitId(),
+      size: AdSize.banner,
+      request: const AdRequest(),
+      listener: BannerAdListener(
+        onAdLoaded: (ad) {
+          print('バナー広告読み込み完了');
+        },
+        onAdFailedToLoad: (ad, error) {
+          print('バナー広告読み込み失敗: $error');
+          ad.dispose();
+        },
+      ),
+    );
+    _bannerAd!.load();
+  }
+
+  /// バナー広告を取得
+  BannerAd? get bannerAd => _bannerAd;
+
   /// リソースクリーンアップ
   void dispose() {
     _interstitialAd?.dispose();
     _interstitialAd = null;
     _isInterstitialAdReady = false;
+    _bannerAd?.dispose();
+    _bannerAd = null;
   }
 }
