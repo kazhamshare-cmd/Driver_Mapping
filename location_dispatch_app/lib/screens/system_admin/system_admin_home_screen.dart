@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../../services/auth_service.dart';
 import '../../models/organization.dart';
 import 'package:intl/intl.dart';
+import 'widgets/edit_organization_dialog.dart';
 
 /// システム管理者専用のホーム画面
 /// 全組織を横断管理できる
@@ -463,10 +464,7 @@ class _SystemAdminHomeScreenState extends State<SystemAdminHomeScreen> {
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
-              // TODO: 組織編集画面へ
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('組織編集機能は今後実装予定です')),
-              );
+              _showEditOrganizationDialog(org);
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             child: const Text('編集', style: TextStyle(color: Colors.white)),
@@ -497,6 +495,14 @@ class _SystemAdminHomeScreenState extends State<SystemAdminHomeScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  /// 組織編集ダイアログを表示
+  Future<void> _showEditOrganizationDialog(Organization org) async {
+    await showDialog(
+      context: context,
+      builder: (context) => EditOrganizationDialog(organization: org),
     );
   }
 }
