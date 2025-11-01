@@ -12,6 +12,8 @@ import '../../models/subscription_plan.dart';
 import '../../routes/app_routes.dart';
 import 'package:intl/intl.dart';
 import 'organization_settings_screen.dart';
+import 'widgets/add_staff_dialog.dart';
+import 'widgets/edit_staff_dialog.dart';
 
 class AdminHomeScreen extends StatefulWidget {
   const AdminHomeScreen({super.key});
@@ -51,8 +53,8 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
         index: _selectedIndex,
         children: [
           _buildDashboardTab(),
-          _buildSimpleTab('スタッフ管理', Icons.people),
-          _buildSimpleTab('財務管理', Icons.attach_money),
+          _buildStaffTab(),
+          _buildFinanceTab(),
           _buildSettingsTab(),
         ],
       ),
@@ -1157,37 +1159,18 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
     );
   }
 
-  // ダイアログ関数（実装例）
+  // スタッフダイアログ
   Future<void> _showAddStaffDialog(String organizationId) async {
     await showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('スタッフ追加'),
-        content: const Text(
-            'スタッフ追加機能は別途Firebase Authenticationでのユーザー作成が必要です。\n\n管理者コンソールまたはオペレーター画面から追加してください。'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('閉じる'),
-          ),
-        ],
-      ),
+      builder: (context) => AddStaffDialog(organizationId: organizationId),
     );
   }
 
   Future<void> _showEditStaffDialog(AppUser user) async {
     await showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('スタッフ編集'),
-        content: Text('${user.name}の編集機能は今後実装予定です。'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('閉じる'),
-          ),
-        ],
-      ),
+      builder: (context) => EditStaffDialog(user: user),
     );
   }
 
@@ -1213,11 +1196,19 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
 
     if (confirmed == true) {
       try {
+        // ユーザーを削除
         await _firestore.collection('users').doc(user.id).delete();
+
+        // 組織のアクティブユーザー数を減らす
+        await _firestore.collection('organizations').doc(user.organizationId).update({
+          'activeUserCount': FieldValue.increment(-1),
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('スタッフを削除しました'),
+            SnackBar(
+              content: Text('${user.name}を削除しました'),
               backgroundColor: Colors.green,
             ),
           );
