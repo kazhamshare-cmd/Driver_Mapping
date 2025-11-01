@@ -1,0 +1,239 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ========================================
+    // ヘルパー関数
+    // ========================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function userExists() {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function hasRole(role) {
+      return isAuthenticated() && userExists() && getUserData().role == role;
+    }
+
+    function isSystemAdmin() {
+      return hasRole('systemAdmin');
+    }
+
+    function isOperatorOrAdmin() {
+      return hasRole('admin') || hasRole('operator') || isSystemAdmin();
+    }
+
+    function isSameOrganization(orgId) {
+      return userExists() && getUserData().organizationId == orgId;
+    }
+
+    function canAccessOrganization(orgId) {
+      return isSystemAdmin() || isSameOrganization(orgId);
+    }
+
+    // ========================================
+    // Users コレクション
+    // ========================================
+    match /users/{userId} {
+      // 認証済みユーザーは全ユーザー情報を読める（位置情報表示のため）
+      allow read: if isAuthenticated();
+
+      // 自分のプロフィール、管理者、またはシステム管理者が作成・更新可能
+      allow create: if isAuthenticated() && (isOwner(userId) || hasRole('admin') || isSystemAdmin());
+      allow update: if isAuthenticated() && (isOwner(userId) || hasRole('admin') || isSystemAdmin());
+
+      // 削除は管理者またはシステム管理者のみ
+      allow delete: if hasRole('admin') || isSystemAdmin();
+    }
+
+    // ========================================
+    // Organizations コレクション
+    // ========================================
+    match /organizations/{orgId} {
+      // システム管理者は全組織を読める、所属組織のみ読める、または新規ユーザー作成時（テストセットアップ用）
+      allow read: if isAuthenticated() && (isSystemAdmin() || isSameOrganization(orgId) || !userExists());
+
+      // 作成・更新・削除はシステム管理者または管理者のみ、または新規ユーザー作成時（テストセットアップ用）
+      allow create: if isAuthenticated() && (!userExists() || hasRole('admin') || isSystemAdmin());
+      allow update, delete: if hasRole('admin') || isSystemAdmin();
+    }
+
+    // ========================================
+    // Requests コレクション
+    // ========================================
+    match /requests/{requestId} {
+      // 同じ組織、または自分が担当
+      allow read: if isAuthenticated() && (
+        canAccessOrganization(resource.data.organizationId) ||
+        isOwner(resource.data.assignedWorkerId) ||
+        isOwner(resource.data.assignedDriverId)
+      );
+
+      // 作成はオペレーター・管理者のみ
+      allow create: if isOperatorOrAdmin() &&
+        canAccessOrganization(request.resource.data.organizationId);
+
+      // 更新はオペレーター・管理者、または担当者
+      allow update: if isAuthenticated() && (
+        isOperatorOrAdmin() ||
+        isOwner(resource.data.assignedWorkerId) ||
+        isOwner(resource.data.assignedDriverId)
+      ) && canAccessOrganization(resource.data.organizationId);
+
+      // 削除は管理者のみ
+      allow delete: if (hasRole('admin') || isSystemAdmin()) && canAccessOrganization(resource.data.organizationId);
+    }
+
+    // ========================================
+    // Transports コレクション
+    // ========================================
+    match /transports/{transportId} {
+      // 同じ組織、または自分が関係者
+      allow read: if isAuthenticated() && (
+        canAccessOrganization(resource.data.organizationId) ||
+        isOwner(resource.data.driverId) ||
+        isOwner(resource.data.workerId)
+      );
+
+      // 作成はオペレーター・管理者・ドライバー
+      allow create: if isAuthenticated() && (
+        isOperatorOrAdmin() || hasRole('driver')
+      ) && canAccessOrganization(request.resource.data.organizationId);
+
+      // 更新はオペレーター・管理者、または担当ドライバー
+      allow update: if isAuthenticated() && (
+        isOperatorOrAdmin() ||
+        isOwner(resource.data.driverId)
+      ) && canAccessOrganization(resource.data.organizationId);
+
+      // 削除は管理者のみ
+      allow delete: if (hasRole('admin') || isSystemAdmin()) && canAccessOrganization(resource.data.organizationId);
+    }
+
+    // ========================================
+    // Service Menus コレクション
+    // ========================================
+    match /serviceMenus/{menuId} {
+      // 同じ組織
+      allow read: if isAuthenticated() && canAccessOrganization(resource.data.organizationId);
+
+      // 作成・更新・削除はオペレーター・管理者のみ
+      allow create, update, delete: if isOperatorOrAdmin() &&
+        canAccessOrganization(request.resource.data.organizationId);
+    }
+
+    // ========================================
+    // Service Options コレクション
+    // ========================================
+    match /serviceOptions/{optionId} {
+      // 同じ組織
+      allow read: if isAuthenticated() && canAccessOrganization(resource.data.organizationId);
+
+      // 作成・更新・削除はオペレーター・管理者のみ
+      allow create, update, delete: if isOperatorOrAdmin() &&
+        canAccessOrganization(request.resource.data.organizationId);
+    }
+
+    // ========================================
+    // Service Change Requests コレクション
+    // ========================================
+    match /serviceChangeRequests/{changeId} {
+      // 同じ組織
+      allow read: if isAuthenticated() && canAccessOrganization(resource.data.organizationId);
+
+      // 作成は技術者のみ（自分が担当）
+      allow create: if hasRole('worker') &&
+        isOwner(request.resource.data.workerId) &&
+        canAccessOrganization(request.resource.data.organizationId);
+
+      // 更新はオペレーター・管理者のみ
+      allow update: if isOperatorOrAdmin() &&
+        canAccessOrganization(resource.data.organizationId);
+
+      // 削除は管理者のみ
+      allow delete: if (hasRole('admin') || isSystemAdmin()) && canAccessOrganization(resource.data.organizationId);
+    }
+
+    // ========================================
+    // Invoices コレクション
+    // ========================================
+    match /invoices/{invoiceId} {
+      // 自分の請求書、またはオペレーター・管理者
+      allow read: if isAuthenticated() && (
+        isOwner(resource.data.workerId) ||
+        isOperatorOrAdmin()
+      ) && canAccessOrganization(resource.data.organizationId);
+
+      // 作成は技術者のみ（自分の請求書）
+      allow create: if hasRole('worker') &&
+        isOwner(request.resource.data.workerId) &&
+        canAccessOrganization(request.resource.data.organizationId);
+
+      // 更新は技術者（draft/submittedのみ）、またはオペレーター・管理者
+      allow update: if isAuthenticated() && (
+        (hasRole('worker') && isOwner(resource.data.workerId) &&
+         resource.data.status in ['draft', 'submitted']) ||
+        isOperatorOrAdmin()
+      ) && canAccessOrganization(resource.data.organizationId);
+
+      // 削除は管理者のみ
+      allow delete: if (hasRole('admin') || isSystemAdmin()) && canAccessOrganization(resource.data.organizationId);
+    }
+
+    // ========================================
+    // Reservations コレクション
+    // ========================================
+    match /reservations/{reservationId} {
+      // 同じ組織、または自分が担当
+      allow read: if isAuthenticated() && (
+        canAccessOrganization(resource.data.organizationId) ||
+        isOwner(resource.data.assignedWorkerId) ||
+        isOwner(resource.data.assignedDriverId)
+      );
+
+      // 作成はオペレーター・管理者のみ
+      allow create: if isOperatorOrAdmin() &&
+        canAccessOrganization(request.resource.data.organizationId);
+
+      // 更新はオペレーター・管理者、または担当者
+      allow update: if isAuthenticated() && (
+        isOperatorOrAdmin() ||
+        isOwner(resource.data.assignedWorkerId) ||
+        isOwner(resource.data.assignedDriverId)
+      ) && canAccessOrganization(resource.data.organizationId);
+
+      // 削除は管理者のみ
+      allow delete: if (hasRole('admin') || isSystemAdmin()) && canAccessOrganization(resource.data.organizationId);
+    }
+
+    // ========================================
+    // Notification Queue コレクション
+    // ========================================
+    match /notificationQueue/{notifId} {
+      // 作成は認証済みユーザー
+      allow create: if isAuthenticated();
+
+      // 読み取り・更新・削除はCloud Functionsのみ
+      allow read, update, delete: if false;
+    }
+
+    // ========================================
+    // デフォルト（すべて拒否）
+    // ========================================
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
