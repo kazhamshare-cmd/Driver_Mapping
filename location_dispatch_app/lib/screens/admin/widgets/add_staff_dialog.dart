@@ -57,7 +57,6 @@ class _AddStaffDialogState extends State<AddStaffDialog> {
         id: userCredential.user!.uid,
         organizationId: widget.organizationId,
         name: _nameController.text.trim(),
-        email: _emailController.text.trim(),
         phone: _phoneController.text.trim(),
         role: _selectedRole,
         status: UserStatus.offline,

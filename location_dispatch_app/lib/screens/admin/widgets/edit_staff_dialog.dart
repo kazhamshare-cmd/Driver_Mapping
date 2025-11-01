@@ -103,18 +103,6 @@ class _EditStaffDialogState extends State<EditStaffDialog> {
             child: ListView(
               padding: const EdgeInsets.all(16),
               children: [
-                // メールアドレス（編集不可）
-                TextFormField(
-                  initialValue: widget.user.email,
-                  decoration: const InputDecoration(
-                    labelText: 'メールアドレス',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.email),
-                    enabled: false,
-                    helperText: 'メールアドレスは変更できません',
-                  ),
-                ),
-                const SizedBox(height: 16),
                 TextFormField(
                   controller: _nameController,
                   decoration: const InputDecoration(
