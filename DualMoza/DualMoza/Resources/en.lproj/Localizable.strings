@@ -1,0 +1,93 @@
+/* English */
+
+/* App Name */
+"app_name" = "DualMoza";
+
+/* Main Screen */
+"recording" = "Recording";
+"record" = "Record";
+"stop" = "Stop";
+"settings" = "Settings";
+"gallery" = "Gallery";
+
+/* Camera Controls */
+"pip_settings" = "PiP Settings";
+"shape" = "Shape";
+"size" = "Size";
+"back_camera" = "Back Camera";
+"front_camera" = "Front Camera";
+"display" = "Display";
+"zoom" = "Zoom";
+"ev" = "EV";
+"mosaic" = "Mosaic";
+"auto_face_detection" = "Auto face detection";
+"roughness" = "Roughness";
+"fine" = "Fine";
+"coarse" = "Coarse";
+
+/* Camera Modes */
+"mode_on" = "ON";
+"mode_off" = "OFF";
+"mode_static" = "Static";
+
+/* PiP Shapes */
+"shape_circle" = "Circle";
+"shape_rectangle" = "Rectangle";
+
+/* Settings */
+"account" = "Account";
+"plan" = "Plan";
+"pro" = "PRO";
+"free" = "Free";
+"video_settings" = "Video Settings";
+"quality" = "Quality";
+"auto_save_to_photos" = "Auto save to Photos";
+"about" = "About";
+"version" = "Version";
+"privacy_policy" = "Privacy Policy";
+"terms_of_service" = "Terms of Service";
+"support" = "Support";
+"tips" = "Tips";
+"tip_drag_pip" = "Drag to move PiP";
+"tip_pinch_pip" = "Pinch to resize PiP";
+"tip_mosaic" = "Mosaic auto-detects faces";
+"done" = "Done";
+"close" = "Close";
+
+/* Purchase */
+"dualmoza_pro" = "DualMoza PRO";
+"unlock_all_features" = "Unlock All Features";
+"no_ads" = "No Ads";
+"unlimited_recording" = "Unlimited Recording";
+"no_watermark" = "No Watermark";
+"high_quality_export" = "High Quality Export";
+"one_time_purchase" = "One-time purchase - Use forever";
+"purchase_pro" = "Purchase PRO";
+"restore_purchase" = "Restore Purchase";
+"feature_comparison" = "Feature Comparison";
+"feature" = "Feature";
+"dual_camera" = "Dual Camera";
+"auto_mosaic" = "Auto Mosaic";
+"pip_display" = "PiP Display";
+"recording_time" = "Recording Time";
+"30_seconds" = "30 sec";
+"unlimited" = "Unlimited";
+"ads" = "Ads";
+"yes" = "Yes";
+"no" = "No";
+"watermark" = "Watermark";
+"error" = "Error";
+"ok" = "OK";
+"no_purchase_found" = "No purchase found to restore";
+
+/* Ad Screen */
+"watch_ad_to_continue" = "Watch an ad to continue recording";
+"watch_ad" = "Watch Ad";
+"ad_loading" = "Loading ad...";
+"get_pro_no_ads" = "Get PRO - No Ads";
+"skip" = "Skip";
+
+/* Permissions */
+"camera_permission" = "DualMoza uses front and back cameras to record video.";
+"microphone_permission" = "DualMoza records audio during video recording.";
+"photo_library_permission" = "Used to save recorded videos to your photo library.";

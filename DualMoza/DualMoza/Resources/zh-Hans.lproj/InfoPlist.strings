@@ -1,0 +1,7 @@
+/* Chinese Simplified - Info.plist strings */
+
+"CFBundleDisplayName" = "DualMoza";
+"NSCameraUsageDescription" = "DualMoza使用前后摄像头录制视频。";
+"NSMicrophoneUsageDescription" = "DualMoza在录制视频时录制音频。";
+"NSPhotoLibraryUsageDescription" = "用于将录制的视频保存到您的相册。";
+"NSPhotoLibraryAddUsageDescription" = "将录制的视频保存到您的相册。";

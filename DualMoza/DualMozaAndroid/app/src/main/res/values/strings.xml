@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">DualMoza</string>
+
+    <!-- Camera -->
+    <string name="camera_front">フロントカメラ</string>
+    <string name="camera_back">バックカメラ</string>
+    <string name="camera_off">オフ</string>
+    <string name="camera_on">オン</string>
+    <string name="camera_static">静止画</string>
+
+    <!-- Recording -->
+    <string name="start_recording">録画開始</string>
+    <string name="stop_recording">録画停止</string>
+    <string name="take_photo">写真撮影</string>
+    <string name="video">動画</string>
+    <string name="photo">写真</string>
+
+    <!-- Sidebar -->
+    <string name="flip">反転</string>
+    <string name="mosaic_on">モザ ON</string>
+    <string name="mosaic_off">モザ OFF</string>
+
+    <!-- Privacy Filter -->
+    <string name="privacy_filter">プライバシーフィルター</string>
+    <string name="filter_type">フィルタータイプ</string>
+    <string name="filter_mosaic">モザイク</string>
+    <string name="filter_blur">ぼかし</string>
+    <string name="filter_coverage">フィルター範囲</string>
+    <string name="filter_intensity">フィルター強度</string>
+    <string name="filter_intensity_value">フィルター強度: %d</string>
+    <string name="eyes_only">目のみ</string>
+    <string name="full_face">顔全体</string>
+    <string name="weak">弱い</string>
+    <string name="strong">強い</string>
+
+    <!-- Detection Mode -->
+    <string name="detection_mode">検出モード</string>
+    <string name="face_only">顔のみ</string>
+    <string name="person_detection">人物検出</string>
+    <string name="person_detection_note">横顔・後ろ姿も検出します</string>
+
+    <!-- Mosaic (legacy) -->
+    <string name="mosaic">モザイク</string>
+    <string name="mosaic_intensity">強度</string>
+    <string name="mosaic_coverage">範囲</string>
+
+    <!-- PiP -->
+    <string name="pip">ワイプ</string>
+    <string name="pip_shape">形状</string>
+    <string name="pip_circle">丸</string>
+    <string name="pip_rectangle">四角</string>
+
+    <!-- Settings -->
+    <string name="settings">設定</string>
+    <string name="zoom">ズーム</string>
+    <string name="exposure">露出</string>
+    <string name="close">閉じる</string>
+
+    <!-- Purchase -->
+    <string name="pro_version">Pro版</string>
+    <string name="upgrade_to_pro">Proにアップグレード</string>
+    <string name="pro_features">無制限録画・広告なし・ウォーターマークなし</string>
+    <string name="restore_purchase">購入を復元</string>
+    <string name="pro_no_ads">Pro版で広告なし</string>
+    <string name="billing_unavailable">課金サービスに接続できません。しばらくしてからお試しください。</string>
+    <string name="already_pro">すでにPro版をご利用いただいています</string>
+
+    <!-- Ads -->
+    <string name="ad_required">次の録画には広告視聴が必要です</string>
+    <string name="watch_ad">広告を見る</string>
+    <string name="ad_loading">広告読み込み中...</string>
+    <string name="skip_ad">スキップ</string>
+
+    <!-- Messages -->
+    <string name="save_success">保存しました</string>
+    <string name="photo_saved">写真を保存しました</string>
+    <string name="video_saved">動画を保存しました</string>
+    <string name="save_failed">保存に失敗しました</string>
+    <string name="permission_required">カメラへのアクセス許可が必要です</string>
+    <string name="free_limit">無料版は30秒まで</string>
+
+    <!-- Permission Screen -->
+    <string name="permission_description">DualMozaはカメラとマイクへのアクセスが必要です。\n録画機能を使用するには許可してください。</string>
+    <string name="grant_permission">許可する</string>
+
+    <!-- Gallery -->
+    <string name="open_gallery">ギャラリーを開く</string>
+</resources>

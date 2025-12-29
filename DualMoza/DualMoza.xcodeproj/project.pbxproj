@@ -1,0 +1,534 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		001A00001 /* DualMozaApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 001A00002 /* DualMozaApp.swift */; };
+		001A00003 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 001A00004 /* ContentView.swift */; };
+		001A00005 /* ControlPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 001A00006 /* ControlPanelView.swift */; };
+		001A00007 /* PiPView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 001A00008 /* PiPView.swift */; };
+		001A00009 /* PurchaseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 001A0000A /* PurchaseView.swift */; };
+		001A0000B /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 001A0000C /* SettingsView.swift */; };
+		001A0000D /* CameraManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 001A0000E /* CameraManager.swift */; };
+		001A0000F /* PurchaseManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 001A00010 /* PurchaseManager.swift */; };
+		001A00011 /* AdManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 001A00012 /* AdManager.swift */; };
+		001A00013 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 001A00014 /* AppState.swift */; };
+		001A00015 /* WatermarkRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 001A00016 /* WatermarkRenderer.swift */; };
+		001A00017 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 001A00018 /* Assets.xcassets */; };
+		001A00030 /* PrivacyPolicyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 001A00031 /* PrivacyPolicyView.swift */; };
+		001A00032 /* TermsOfServiceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 001A00033 /* TermsOfServiceView.swift */; };
+		001A00034 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 001A00035 /* LaunchScreen.storyboard */; };
+		001A00036 /* Localization.swift in Sources */ = {isa = PBXBuildFile; fileRef = 001A00037 /* Localization.swift */; };
+		001A00038 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 001A00039 /* Localizable.strings */; };
+		001A0003A /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 001A0003B /* InfoPlist.strings */; };
+		001A00042 /* CameraDetailedSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 001A00043 /* CameraDetailedSettingsView.swift */; };
+		001A00044 /* SidebarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 001A00045 /* SidebarView.swift */; };
+		001A00046 /* ModernBottomBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 001A00047 /* ModernBottomBar.swift */; };
+		001A00048 /* LanguageManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 001A00049 /* LanguageManager.swift */; };
+		7C27A1AC2EFA734C005E0DB0 /* VersionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C27A1AB2EFA734C005E0DB0 /* VersionManager.swift */; };
+		7C284C702EFAF933001E8FEC /* SoundManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C284C6F2EFAF933001E8FEC /* SoundManager.swift */; };
+		7CFB8CD42EFA0DCE00881A82 /* GoogleMobileAds in Frameworks */ = {isa = PBXBuildFile; productRef = 7CFB8CD32EFA0DCE00881A82 /* GoogleMobileAds */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		001A00002 /* DualMozaApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DualMozaApp.swift; sourceTree = "<group>"; };
+		001A00004 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		001A00006 /* ControlPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ControlPanelView.swift; sourceTree = "<group>"; };
+		001A00008 /* PiPView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PiPView.swift; sourceTree = "<group>"; };
+		001A0000A /* PurchaseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PurchaseView.swift; sourceTree = "<group>"; };
+		001A0000C /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		001A0000E /* CameraManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraManager.swift; sourceTree = "<group>"; };
+		001A00010 /* PurchaseManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PurchaseManager.swift; sourceTree = "<group>"; };
+		001A00012 /* AdManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdManager.swift; sourceTree = "<group>"; };
+		001A00014 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
+		001A00016 /* WatermarkRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatermarkRenderer.swift; sourceTree = "<group>"; };
+		001A00018 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		001A00019 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		001A0001A /* DualMoza.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DualMoza.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		001A00031 /* PrivacyPolicyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrivacyPolicyView.swift; sourceTree = "<group>"; };
+		001A00033 /* TermsOfServiceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TermsOfServiceView.swift; sourceTree = "<group>"; };
+		001A00035 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
+		001A00037 /* Localization.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Localization.swift; sourceTree = "<group>"; };
+		001A0003C /* ja */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ja; path = ja.lproj/Localizable.strings; sourceTree = "<group>"; };
+		001A0003D /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
+		001A0003E /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/Localizable.strings"; sourceTree = "<group>"; };
+		001A0003F /* ja */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ja; path = ja.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		001A00040 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		001A00041 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
+		001A00043 /* CameraDetailedSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraDetailedSettingsView.swift; sourceTree = "<group>"; };
+		001A00045 /* SidebarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarView.swift; sourceTree = "<group>"; };
+		001A00047 /* ModernBottomBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModernBottomBar.swift; sourceTree = "<group>"; };
+		001A00049 /* LanguageManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LanguageManager.swift; sourceTree = "<group>"; };
+		7C27A1AB2EFA734C005E0DB0 /* VersionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VersionManager.swift; sourceTree = "<group>"; };
+		7C284C6F2EFAF933001E8FEC /* SoundManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoundManager.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		001A0001B /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				7CFB8CD42EFA0DCE00881A82 /* GoogleMobileAds in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		001A0001C /* DualMoza */ = {
+			isa = PBXGroup;
+			children = (
+				001A00002 /* DualMozaApp.swift */,
+				001A0001D /* Views */,
+				001A0001E /* Managers */,
+				001A0001F /* Models */,
+				001A00020 /* Utils */,
+				001A00021 /* Resources */,
+				001A00035 /* LaunchScreen.storyboard */,
+				001A00019 /* Info.plist */,
+			);
+			path = DualMoza;
+			sourceTree = "<group>";
+		};
+		001A0001D /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				001A00004 /* ContentView.swift */,
+				001A00006 /* ControlPanelView.swift */,
+				001A00008 /* PiPView.swift */,
+				001A0000A /* PurchaseView.swift */,
+				001A0000C /* SettingsView.swift */,
+				001A00031 /* PrivacyPolicyView.swift */,
+				001A00033 /* TermsOfServiceView.swift */,
+				001A00043 /* CameraDetailedSettingsView.swift */,
+				001A00045 /* SidebarView.swift */,
+				001A00047 /* ModernBottomBar.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		001A0001E /* Managers */ = {
+			isa = PBXGroup;
+			children = (
+				7C284C6F2EFAF933001E8FEC /* SoundManager.swift */,
+				7C27A1AB2EFA734C005E0DB0 /* VersionManager.swift */,
+				001A0000E /* CameraManager.swift */,
+				001A00010 /* PurchaseManager.swift */,
+				001A00012 /* AdManager.swift */,
+				001A00049 /* LanguageManager.swift */,
+			);
+			path = Managers;
+			sourceTree = "<group>";
+		};
+		001A0001F /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				001A00014 /* AppState.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		001A00020 /* Utils */ = {
+			isa = PBXGroup;
+			children = (
+				001A00016 /* WatermarkRenderer.swift */,
+				001A00037 /* Localization.swift */,
+			);
+			path = Utils;
+			sourceTree = "<group>";
+		};
+		001A00021 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				001A00018 /* Assets.xcassets */,
+				001A00039 /* Localizable.strings */,
+				001A0003B /* InfoPlist.strings */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		001A00022 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				001A0001A /* DualMoza.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		001A00023 = {
+			isa = PBXGroup;
+			children = (
+				001A0001C /* DualMoza */,
+				001A00022 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		001A00024 /* DualMoza */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 001A00025 /* Build configuration list for PBXNativeTarget "DualMoza" */;
+			buildPhases = (
+				001A00026 /* Sources */,
+				001A0001B /* Frameworks */,
+				001A00027 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = DualMoza;
+			productName = DualMoza;
+			productReference = 001A0001A /* DualMoza.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		001A00028 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1500;
+				LastUpgradeCheck = 1500;
+				TargetAttributes = {
+					001A00024 = {
+						CreatedOnToolsVersion = 15.0;
+					};
+				};
+			};
+			buildConfigurationList = 001A00029 /* Build configuration list for PBXProject "DualMoza" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = ja;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				ja,
+				Base,
+				"zh-Hans",
+			);
+			mainGroup = 001A00023;
+			packageReferences = (
+				7CFB8CD22EFA0DCE00881A82 /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */,
+			);
+			productRefGroup = 001A00022 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				001A00024 /* DualMoza */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		001A00027 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				001A00017 /* Assets.xcassets in Resources */,
+				001A00034 /* LaunchScreen.storyboard in Resources */,
+				001A00038 /* Localizable.strings in Resources */,
+				001A0003A /* InfoPlist.strings in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		001A00026 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				001A00001 /* DualMozaApp.swift in Sources */,
+				001A00003 /* ContentView.swift in Sources */,
+				001A00005 /* ControlPanelView.swift in Sources */,
+				001A00007 /* PiPView.swift in Sources */,
+				001A00009 /* PurchaseView.swift in Sources */,
+				001A0000B /* SettingsView.swift in Sources */,
+				001A00030 /* PrivacyPolicyView.swift in Sources */,
+				001A00032 /* TermsOfServiceView.swift in Sources */,
+				7C27A1AC2EFA734C005E0DB0 /* VersionManager.swift in Sources */,
+				7C284C702EFAF933001E8FEC /* SoundManager.swift in Sources */,
+				001A0000D /* CameraManager.swift in Sources */,
+				001A0000F /* PurchaseManager.swift in Sources */,
+				001A00011 /* AdManager.swift in Sources */,
+				001A00013 /* AppState.swift in Sources */,
+				001A00015 /* WatermarkRenderer.swift in Sources */,
+				001A00036 /* Localization.swift in Sources */,
+				001A00042 /* CameraDetailedSettingsView.swift in Sources */,
+				001A00044 /* SidebarView.swift in Sources */,
+				001A00046 /* ModernBottomBar.swift in Sources */,
+				001A00048 /* LanguageManager.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXVariantGroup section */
+		001A00039 /* Localizable.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				001A0003C /* ja */,
+				001A0003D /* en */,
+				001A0003E /* zh-Hans */,
+			);
+			name = Localizable.strings;
+			sourceTree = "<group>";
+		};
+		001A0003B /* InfoPlist.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				001A0003F /* ja */,
+				001A00040 /* en */,
+				001A00041 /* zh-Hans */,
+			);
+			name = InfoPlist.strings;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
+
+/* Begin XCBuildConfiguration section */
+		001A0002A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		001A0002B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		001A0002C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = G93R2Z67RU;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = DualMoza/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = DualMoza;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.video";
+				INFOPLIST_KEY_NSCameraUsageDescription = "DualMozaはフロントカメラとバックカメラを使用して動画を撮影します。";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "DualMozaは動画撮影時に音声を録音します。";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "撮影した動画をフォトライブラリに保存します。";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "撮影した動画をフォトライブラリに保存するために使用します。";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UIStatusBarStyle = UIStatusBarStyleLightContent;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0.1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.dualmoza.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		001A0002D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = G93R2Z67RU;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = DualMoza/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = DualMoza;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.video";
+				INFOPLIST_KEY_NSCameraUsageDescription = "DualMozaはフロントカメラとバックカメラを使用して動画を撮影します。";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "DualMozaは動画撮影時に音声を録音します。";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "撮影した動画をフォトライブラリに保存します。";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "撮影した動画をフォトライブラリに保存するために使用します。";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UIStatusBarStyle = UIStatusBarStyleLightContent;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0.1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.dualmoza.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		001A00025 /* Build configuration list for PBXNativeTarget "DualMoza" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				001A0002C /* Debug */,
+				001A0002D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		001A00029 /* Build configuration list for PBXProject "DualMoza" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				001A0002A /* Debug */,
+				001A0002B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		7CFB8CD22EFA0DCE00881A82 /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/googleads/swift-package-manager-google-mobile-ads";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 12.14.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		7CFB8CD32EFA0DCE00881A82 /* GoogleMobileAds */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 7CFB8CD22EFA0DCE00881A82 /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */;
+			productName = GoogleMobileAds;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 001A00028 /* Project object */;
+}

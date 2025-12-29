@@ -1,0 +1,7 @@
+/* English - Info.plist strings */
+
+"CFBundleDisplayName" = "DualMoza";
+"NSCameraUsageDescription" = "DualMoza uses front and back cameras to record video.";
+"NSMicrophoneUsageDescription" = "DualMoza records audio during video recording.";
+"NSPhotoLibraryUsageDescription" = "Used to save recorded videos to your photo library.";
+"NSPhotoLibraryAddUsageDescription" = "Save recorded videos to your photo library.";

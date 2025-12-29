@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">DualMoza</string>
+
+    <!-- Camera -->
+    <string name="camera_front">前置摄像头</string>
+    <string name="camera_back">后置摄像头</string>
+    <string name="camera_off">关闭</string>
+    <string name="camera_on">开启</string>
+    <string name="camera_static">静态</string>
+
+    <!-- Recording -->
+    <string name="start_recording">开始录制</string>
+    <string name="stop_recording">停止录制</string>
+    <string name="take_photo">拍照</string>
+    <string name="video">视频</string>
+    <string name="photo">照片</string>
+
+    <!-- Sidebar -->
+    <string name="flip">翻转</string>
+    <string name="mosaic_on">开</string>
+    <string name="mosaic_off">关</string>
+    <string name="pip">画中画</string>
+
+    <!-- Privacy Filter -->
+    <string name="privacy_filter">隐私滤镜</string>
+    <string name="filter_type">滤镜类型</string>
+    <string name="filter_mosaic">马赛克</string>
+    <string name="filter_blur">模糊</string>
+    <string name="filter_coverage">滤镜范围</string>
+    <string name="filter_intensity">滤镜强度</string>
+    <string name="filter_intensity_value">滤镜强度: %d</string>
+    <string name="eyes_only">仅眼部</string>
+    <string name="full_face">全脸</string>
+    <string name="weak">弱</string>
+    <string name="strong">强</string>
+
+    <!-- Detection Mode -->
+    <string name="detection_mode">检测模式</string>
+    <string name="face_only">仅人脸</string>
+    <string name="person_detection">人物</string>
+    <string name="person_detection_note">可检测侧脸和背影</string>
+
+    <!-- Mosaic (legacy) -->
+    <string name="mosaic">马赛克</string>
+    <string name="mosaic_intensity">强度</string>
+    <string name="mosaic_coverage">范围</string>
+
+    <!-- PiP -->
+    <string name="pip_shape">形状</string>
+    <string name="pip_circle">圆形</string>
+    <string name="pip_rectangle">矩形</string>
+
+    <!-- Settings -->
+    <string name="settings">设置</string>
+    <string name="zoom">缩放</string>
+    <string name="exposure">曝光</string>
+    <string name="close">关闭</string>
+
+    <!-- Purchase -->
+    <string name="pro_version">专业版</string>
+    <string name="upgrade_to_pro">升级到专业版</string>
+    <string name="pro_features">无限录制、无广告、无水印</string>
+    <string name="restore_purchase">恢复购买</string>
+    <string name="pro_no_ads">专业版无广告</string>
+    <string name="billing_unavailable">计费服务不可用，请稍后重试</string>
+    <string name="already_pro">您已是专业版用户</string>
+
+    <!-- Ads -->
+    <string name="ad_required">观看广告以继续录制</string>
+    <string name="watch_ad">观看广告</string>
+    <string name="ad_loading">广告加载中...</string>
+    <string name="skip_ad">跳过</string>
+
+    <!-- Messages -->
+    <string name="save_success">已保存</string>
+    <string name="photo_saved">照片已保存</string>
+    <string name="video_saved">视频已保存</string>
+    <string name="save_failed">保存失败</string>
+    <string name="permission_required">需要相机访问权限</string>
+    <string name="free_limit">免费版限制30秒</string>
+
+    <!-- Permission Screen -->
+    <string name="permission_description">DualMoza需要访问您的摄像头和麦克风。\n请授予权限以使用录制功能。</string>
+    <string name="grant_permission">授予权限</string>
+
+    <!-- Gallery -->
+    <string name="open_gallery">打开相册</string>
+</resources>

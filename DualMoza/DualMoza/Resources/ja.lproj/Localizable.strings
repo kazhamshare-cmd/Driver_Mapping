@@ -1,0 +1,93 @@
+/* Japanese - Base Language */
+
+/* App Name */
+"app_name" = "DualMoza";
+
+/* Main Screen */
+"recording" = "録画中";
+"record" = "録画";
+"stop" = "停止";
+"settings" = "設定";
+"gallery" = "ギャラリー";
+
+/* Camera Controls */
+"pip_settings" = "PiP設定";
+"shape" = "形状";
+"size" = "サイズ";
+"back_camera" = "アウトカメラ";
+"front_camera" = "インカメラ";
+"display" = "表示";
+"zoom" = "Zoom";
+"ev" = "EV";
+"mosaic" = "モザイク";
+"auto_face_detection" = "顔を自動検出";
+"roughness" = "荒さ";
+"fine" = "細";
+"coarse" = "荒";
+
+/* Camera Modes */
+"mode_on" = "ON";
+"mode_off" = "OFF";
+"mode_static" = "静止画";
+
+/* PiP Shapes */
+"shape_circle" = "丸";
+"shape_rectangle" = "四角";
+
+/* Settings */
+"account" = "アカウント";
+"plan" = "プラン";
+"pro" = "PRO";
+"free" = "無料版";
+"video_settings" = "動画設定";
+"quality" = "画質";
+"auto_save_to_photos" = "フォトライブラリに自動保存";
+"about" = "アプリについて";
+"version" = "バージョン";
+"privacy_policy" = "プライバシーポリシー";
+"terms_of_service" = "利用規約";
+"support" = "サポート";
+"tips" = "使い方のヒント";
+"tip_drag_pip" = "PiPはドラッグで移動できます";
+"tip_pinch_pip" = "PiPはピンチで拡大縮小できます";
+"tip_mosaic" = "モザイクは顔を自動検出します";
+"done" = "完了";
+"close" = "閉じる";
+
+/* Purchase */
+"dualmoza_pro" = "DualMoza PRO";
+"unlock_all_features" = "すべての機能を解放";
+"no_ads" = "広告なし";
+"unlimited_recording" = "録画時間無制限";
+"no_watermark" = "ウォーターマークなし";
+"high_quality_export" = "高品質エクスポート";
+"one_time_purchase" = "買い切り・一度の支払いで永久に使える";
+"purchase_pro" = "PRO版を購入";
+"restore_purchase" = "購入を復元";
+"feature_comparison" = "機能比較";
+"feature" = "機能";
+"dual_camera" = "両カメラ撮影";
+"auto_mosaic" = "自動モザイク";
+"pip_display" = "PiP表示";
+"recording_time" = "録画時間";
+"30_seconds" = "30秒";
+"unlimited" = "無制限";
+"ads" = "広告";
+"yes" = "あり";
+"no" = "なし";
+"watermark" = "ウォーターマーク";
+"error" = "エラー";
+"ok" = "OK";
+"no_purchase_found" = "復元できる購入が見つかりませんでした";
+
+/* Ad Screen */
+"watch_ad_to_continue" = "広告を視聴して次の撮影へ";
+"watch_ad" = "広告を視聴";
+"ad_loading" = "広告を読み込み中...";
+"get_pro_no_ads" = "PRO版で広告なし";
+"skip" = "スキップ";
+
+/* Permissions */
+"camera_permission" = "DualMozaはフロントカメラとバックカメラを使用して動画を撮影します。";
+"microphone_permission" = "DualMozaは動画撮影時に音声を録音します。";
+"photo_library_permission" = "撮影した動画をフォトライブラリに保存するために使用します。";

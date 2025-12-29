@@ -1,0 +1,7 @@
+/* Japanese - Info.plist strings */
+
+"CFBundleDisplayName" = "DualMoza";
+"NSCameraUsageDescription" = "DualMozaはフロントカメラとバックカメラを使用して動画を撮影します。";
+"NSMicrophoneUsageDescription" = "DualMozaは動画撮影時に音声を録音します。";
+"NSPhotoLibraryUsageDescription" = "撮影した動画をフォトライブラリに保存するために使用します。";
+"NSPhotoLibraryAddUsageDescription" = "撮影した動画をフォトライブラリに保存します。";
