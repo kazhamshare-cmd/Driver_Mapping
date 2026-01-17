@@ -1,6 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, Alert, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, Alert, Platform, ActivityIndicator, ScrollView, TextInput, Modal } from 'react-native';
+import { Picker } from '@react-native-picker/picker';
 import * as Location from 'expo-location';
+import { authService } from '../services/authService';
+import { API_ENDPOINTS } from '../config/api';
+import { useIndustryFields } from '../hooks/useIndustryFields';
+import { BreakRecord } from '../config/industryFields';
+import BreakRecordInput from '../components/BreakRecordInput';
 
 export default function GpsTrackingScreen({ navigation }: any) {
     const [duration, setDuration] = useState(0);
@@ -8,6 +14,29 @@ export default function GpsTrackingScreen({ navigation }: any) {
     const [status, setStatus] = useState('waiting'); // waiting, tracking, paused
     const [currentLocation, setCurrentLocation] = useState<Location.LocationObject | null>(null);
     const [routeCoordinates, setRouteCoordinates] = useState<Location.LocationObject[]>([]);
+    const [workRecordId, setWorkRecordId] = useState<number | null>(null);
+    const [submitting, setSubmitting] = useState(false);
+
+    // Industry-specific fields
+    const {
+        isFieldVisible,
+        getFieldLabel,
+        operationTypes,
+        coDrivers,
+        isBusIndustry,
+        isTaxiIndustry,
+        loading: industryLoading
+    } = useIndustryFields();
+
+    // Industry-specific state
+    const [numPassengers, setNumPassengers] = useState('');
+    const [operationType, setOperationType] = useState('');
+    const [coDriverId, setCoDriverId] = useState<number | null>(null);
+    const [breakRecords, setBreakRecords] = useState<BreakRecord[]>([]);
+    const [cargoWeight, setCargoWeight] = useState('');
+    const [actualDistance, setActualDistance] = useState('');
+    const [revenue, setRevenue] = useState('');
+    const [showEndModal, setShowEndModal] = useState(false);
 
     const timerRef = useRef<NodeJS.Timeout | null>(null);
     const locationSubscription = useRef<Location.LocationSubscription | null>(null);
@@ -29,10 +58,29 @@ export default function GpsTrackingScreen({ navigation }: any) {
     }
 
     const startTracking = async () => {
-        let { status } = await Location.requestForegroundPermissionsAsync();
-        if (status !== 'granted') {
+        let { status: permStatus } = await Location.requestForegroundPermissionsAsync();
+        if (permStatus !== 'granted') {
             Alert.alert('許可が必要です', 'GPS追跡を行うには位置情報の許可が必要です。');
             return;
+        }
+
+        // Create work record via API
+        try {
+            const response = await authService.authenticatedFetch(API_ENDPOINTS.START_WORK, {
+                method: 'POST',
+                body: JSON.stringify({
+                    work_date: new Date().toISOString().split('T')[0],
+                }),
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                setWorkRecordId(data.id);
+            } else {
+                console.warn('Failed to create work record, continuing offline');
+            }
+        } catch (error) {
+            console.warn('API unavailable, continuing offline:', error);
         }
 
         setStatus('tracking');
@@ -68,28 +116,84 @@ export default function GpsTrackingScreen({ navigation }: any) {
                     }
                     return [...prev, location];
                 });
+
+                // Send location update to server (non-blocking)
+                if (workRecordId) {
+                    authService.authenticatedFetch(API_ENDPOINTS.UPDATE_LOCATION, {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            work_record_id: workRecordId,
+                            latitude: location.coords.latitude,
+                            longitude: location.coords.longitude,
+                            accuracy: location.coords.accuracy,
+                            timestamp: location.timestamp,
+                        }),
+                    }).catch(() => {});
+                }
             }
         );
     };
 
-    const stopTracking = () => {
+    const stopTracking = async () => {
         if (timerRef.current) clearInterval(timerRef.current);
         if (locationSubscription.current) locationSubscription.current.remove();
         setStatus('stopped');
+        setShowEndModal(true);
+    };
 
-        Alert.alert(
-            '勤務終了',
-            `お疲れ様でした。\n走行距離: ${(distance / 1000).toFixed(2)} km\n勤務時間: ${formatTime(duration)}`,
-            [
-                {
-                    text: 'データを送信して終了',
-                    onPress: () => {
-                        // TODO: Send data to API
-                        navigation.navigate('ModeSelection');
-                    }
+    const submitWorkRecord = async () => {
+        setSubmitting(true);
+        const distanceKm = distance / 1000;
+
+        try {
+            // Send work record to API with industry-specific data
+            if (workRecordId) {
+                const payload: any = {
+                    work_record_id: workRecordId,
+                    distance: distanceKm,
+                    duration: duration,
+                };
+
+                // Add industry-specific fields
+                if (isFieldVisible('num_passengers') && numPassengers) {
+                    payload.num_passengers = parseInt(numPassengers, 10);
                 }
-            ]
-        );
+                if (isFieldVisible('operation_type') && operationType) {
+                    payload.operation_type = operationType;
+                }
+                if (isFieldVisible('co_driver_id') && coDriverId) {
+                    payload.co_driver_id = coDriverId;
+                }
+                if (isFieldVisible('break_records') && breakRecords.length > 0) {
+                    payload.break_records = breakRecords;
+                }
+                if (isFieldVisible('cargo_weight') && cargoWeight) {
+                    payload.cargo_weight = parseFloat(cargoWeight);
+                }
+                if (isFieldVisible('actual_distance') && actualDistance) {
+                    payload.actual_distance = parseFloat(actualDistance);
+                }
+                if (isFieldVisible('revenue') && revenue) {
+                    payload.revenue = parseFloat(revenue);
+                }
+
+                await authService.authenticatedFetch(API_ENDPOINTS.END_WORK, {
+                    method: 'POST',
+                    body: JSON.stringify(payload),
+                });
+            }
+            setShowEndModal(false);
+            navigation.navigate('ModeSelection');
+        } catch (error) {
+            console.error('Failed to submit work record:', error);
+            Alert.alert(
+                'エラー',
+                'データの送信に失敗しました。後でもう一度お試しください。',
+                [{ text: 'OK', onPress: () => navigation.navigate('ModeSelection') }]
+            );
+        } finally {
+            setSubmitting(false);
+        }
     };
 
     useEffect(() => {
@@ -156,6 +260,163 @@ export default function GpsTrackingScreen({ navigation }: any) {
                     <Text style={styles.stopButtonText}>勤務終了</Text>
                 </TouchableOpacity>
             </View>
+
+            {/* End Work Modal with Industry-Specific Fields */}
+            <Modal
+                visible={showEndModal}
+                animationType="slide"
+                transparent={true}
+                onRequestClose={() => setShowEndModal(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>勤務終了</Text>
+                            <TouchableOpacity onPress={() => setShowEndModal(false)}>
+                                <Text style={styles.modalCloseText}>×</Text>
+                            </TouchableOpacity>
+                        </View>
+
+                        <ScrollView style={styles.modalBody}>
+                            {/* Summary */}
+                            <View style={styles.summarySection}>
+                                <Text style={styles.summaryText}>
+                                    走行距離: {(distance / 1000).toFixed(2)} km
+                                </Text>
+                                <Text style={styles.summaryText}>
+                                    勤務時間: {formatTime(duration)}
+                                </Text>
+                            </View>
+
+                            {/* Industry-Specific Fields */}
+                            {isFieldVisible('num_passengers') && (
+                                <View style={styles.inputGroup}>
+                                    <Text style={styles.inputLabel}>{getFieldLabel('num_passengers')}</Text>
+                                    <TextInput
+                                        style={styles.input}
+                                        value={numPassengers}
+                                        onChangeText={setNumPassengers}
+                                        keyboardType="numeric"
+                                        placeholder="0"
+                                    />
+                                </View>
+                            )}
+
+                            {isFieldVisible('operation_type') && (
+                                <View style={styles.inputGroup}>
+                                    <Text style={styles.inputLabel}>{getFieldLabel('operation_type')}</Text>
+                                    <View style={styles.pickerContainer}>
+                                        <Picker
+                                            selectedValue={operationType}
+                                            onValueChange={(value) => setOperationType(value)}
+                                            style={styles.picker}
+                                        >
+                                            <Picker.Item label="選択してください" value="" />
+                                            {operationTypes.map((type) => (
+                                                <Picker.Item
+                                                    key={type.code}
+                                                    label={type.nameJa}
+                                                    value={type.code}
+                                                />
+                                            ))}
+                                        </Picker>
+                                    </View>
+                                </View>
+                            )}
+
+                            {isFieldVisible('co_driver_id') && (
+                                <View style={styles.inputGroup}>
+                                    <Text style={styles.inputLabel}>{getFieldLabel('co_driver_id')}</Text>
+                                    <View style={styles.pickerContainer}>
+                                        <Picker
+                                            selectedValue={coDriverId}
+                                            onValueChange={(value) => setCoDriverId(value)}
+                                            style={styles.picker}
+                                        >
+                                            <Picker.Item label="なし" value={null} />
+                                            {coDrivers.map((driver) => (
+                                                <Picker.Item
+                                                    key={driver.id}
+                                                    label={driver.name}
+                                                    value={driver.id}
+                                                />
+                                            ))}
+                                        </Picker>
+                                    </View>
+                                </View>
+                            )}
+
+                            {isFieldVisible('cargo_weight') && (
+                                <View style={styles.inputGroup}>
+                                    <Text style={styles.inputLabel}>{getFieldLabel('cargo_weight')} (t)</Text>
+                                    <TextInput
+                                        style={styles.input}
+                                        value={cargoWeight}
+                                        onChangeText={setCargoWeight}
+                                        keyboardType="decimal-pad"
+                                        placeholder="0.0"
+                                    />
+                                </View>
+                            )}
+
+                            {isFieldVisible('actual_distance') && (
+                                <View style={styles.inputGroup}>
+                                    <Text style={styles.inputLabel}>{getFieldLabel('actual_distance')} (km)</Text>
+                                    <TextInput
+                                        style={styles.input}
+                                        value={actualDistance}
+                                        onChangeText={setActualDistance}
+                                        keyboardType="decimal-pad"
+                                        placeholder="0.0"
+                                    />
+                                </View>
+                            )}
+
+                            {isFieldVisible('revenue') && (
+                                <View style={styles.inputGroup}>
+                                    <Text style={styles.inputLabel}>{getFieldLabel('revenue')} (円)</Text>
+                                    <TextInput
+                                        style={styles.input}
+                                        value={revenue}
+                                        onChangeText={setRevenue}
+                                        keyboardType="numeric"
+                                        placeholder="0"
+                                    />
+                                </View>
+                            )}
+
+                            {isFieldVisible('break_records') && (
+                                <View style={styles.inputGroup}>
+                                    <BreakRecordInput
+                                        value={breakRecords}
+                                        onChange={setBreakRecords}
+                                    />
+                                </View>
+                            )}
+                        </ScrollView>
+
+                        <View style={styles.modalFooter}>
+                            <TouchableOpacity
+                                style={styles.cancelModalButton}
+                                onPress={() => setShowEndModal(false)}
+                            >
+                                <Text style={styles.cancelModalButtonText}>キャンセル</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={[styles.submitButton, submitting && styles.submitButtonDisabled]}
+                                onPress={submitWorkRecord}
+                                disabled={submitting}
+                            >
+                                {submitting ? (
+                                    <ActivityIndicator color="#FFF" />
+                                ) : (
+                                    <Text style={styles.submitButtonText}>送信して終了</Text>
+                                )}
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
         </SafeAreaView>
     );
 }
@@ -240,5 +501,110 @@ const styles = StyleSheet.create({
         color: 'white',
         fontSize: 24,
         fontWeight: 'bold',
+    },
+    // Modal styles
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        justifyContent: 'flex-end',
+    },
+    modalContent: {
+        backgroundColor: '#FFF',
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
+        maxHeight: '85%',
+    },
+    modalHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: 16,
+        borderBottomWidth: 1,
+        borderBottomColor: '#E0E0E0',
+    },
+    modalTitle: {
+        fontSize: 18,
+        fontWeight: '600',
+        color: '#333',
+    },
+    modalCloseText: {
+        fontSize: 28,
+        color: '#666',
+        lineHeight: 28,
+    },
+    modalBody: {
+        padding: 16,
+    },
+    modalFooter: {
+        flexDirection: 'row',
+        padding: 16,
+        gap: 12,
+        borderTopWidth: 1,
+        borderTopColor: '#E0E0E0',
+    },
+    summarySection: {
+        backgroundColor: '#F0F7FF',
+        padding: 16,
+        borderRadius: 12,
+        marginBottom: 16,
+    },
+    summaryText: {
+        fontSize: 16,
+        color: '#333',
+        marginBottom: 4,
+    },
+    inputGroup: {
+        marginBottom: 16,
+    },
+    inputLabel: {
+        fontSize: 14,
+        fontWeight: '500',
+        color: '#333',
+        marginBottom: 8,
+    },
+    input: {
+        borderWidth: 1,
+        borderColor: '#DDD',
+        borderRadius: 8,
+        padding: 12,
+        fontSize: 16,
+        backgroundColor: '#FFF',
+    },
+    pickerContainer: {
+        borderWidth: 1,
+        borderColor: '#DDD',
+        borderRadius: 8,
+        overflow: 'hidden',
+        backgroundColor: '#FFF',
+    },
+    picker: {
+        height: 50,
+    },
+    cancelModalButton: {
+        flex: 1,
+        padding: 14,
+        borderRadius: 8,
+        backgroundColor: '#F5F5F5',
+        alignItems: 'center',
+    },
+    cancelModalButtonText: {
+        fontSize: 16,
+        fontWeight: '500',
+        color: '#666',
+    },
+    submitButton: {
+        flex: 1,
+        padding: 14,
+        borderRadius: 8,
+        backgroundColor: '#4CAF50',
+        alignItems: 'center',
+    },
+    submitButtonDisabled: {
+        backgroundColor: '#A5D6A7',
+    },
+    submitButtonText: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#FFF',
     },
 });

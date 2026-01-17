@@ -2,13 +2,18 @@ import { Request, Response } from 'express';
 import { StripeService } from '../services/stripeService';
 import { pool } from '../utils/db';
 import { getPlanById, PlanType } from '../config/pricing-plans';
+import Stripe from 'stripe';
 
-// Map Plans to Stripe Price IDs
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
+    apiVersion: '2024-12-18.acacia' as any,
+});
+
+// Map Plans to Stripe Price IDs from environment variables
 const PLAN_PRICE_IDS: Record<string, string> = {
-    [PlanType.SMALL]: 'price_PLACEHOLDER_SMALL',
-    [PlanType.STANDARD]: 'price_PLACEHOLDER_STANDARD',
-    [PlanType.PRO]: 'price_PLACEHOLDER_PRO',
-    [PlanType.ENTERPRISE]: 'price_PLACEHOLDER_ENTERPRISE', // Enterprise usually requires custom handling
+    [PlanType.SMALL]: process.env.STRIPE_PRICE_SMALL || '',
+    [PlanType.STANDARD]: process.env.STRIPE_PRICE_STANDARD || '',
+    [PlanType.PRO]: process.env.STRIPE_PRICE_PRO || '',
+    [PlanType.ENTERPRISE]: process.env.STRIPE_PRICE_ENTERPRISE || '',
 };
 
 export const createSubscription = async (req: Request, res: Response) => {
@@ -81,5 +86,119 @@ export const createSubscription = async (req: Request, res: Response) => {
     } catch (error: any) {
         console.error('Subscription creation failed:', error);
         res.status(500).json({ error: error.message || 'Subscription creation failed' });
+    }
+};
+
+// Get current subscription info
+export const getSubscription = async (req: Request, res: Response) => {
+    const user = (req as any).user;
+
+    if (!user || !user.userId) {
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    try {
+        // Get subscription from DB
+        const result = await pool.query(`
+            SELECT s.*, u.stripe_customer_id
+            FROM subscriptions s
+            JOIN users u ON s.user_id = u.id
+            WHERE s.user_id = $1
+            ORDER BY s.created_at DESC
+            LIMIT 1
+        `, [user.userId]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'No subscription found' });
+        }
+
+        const subscription = result.rows[0];
+
+        // Get Stripe subscription details for real-time info
+        if (subscription.stripe_subscription_id) {
+            try {
+                const stripeSubscription = await stripe.subscriptions.retrieve(subscription.stripe_subscription_id) as any;
+
+                // Update local subscription with Stripe data
+                subscription.status = stripeSubscription.status;
+                subscription.trial_ends_at = stripeSubscription.trial_end
+                    ? new Date(stripeSubscription.trial_end * 1000).toISOString()
+                    : null;
+                subscription.current_period_end = stripeSubscription.current_period_end
+                    ? new Date(stripeSubscription.current_period_end * 1000).toISOString()
+                    : null;
+                subscription.cancel_at_period_end = stripeSubscription.cancel_at_period_end;
+
+                // Update DB with latest status
+                await pool.query(`
+                    UPDATE subscriptions
+                    SET status = $1, updated_at = CURRENT_TIMESTAMP
+                    WHERE id = $2
+                `, [stripeSubscription.status, subscription.id]);
+            } catch (stripeErr) {
+                console.error('Error fetching Stripe subscription:', stripeErr);
+                // Continue with local data
+            }
+        }
+
+        res.json(subscription);
+    } catch (error: any) {
+        console.error('Get subscription failed:', error);
+        res.status(500).json({ error: error.message || 'Failed to get subscription' });
+    }
+};
+
+// Cancel subscription
+export const cancelSubscription = async (req: Request, res: Response) => {
+    const user = (req as any).user;
+
+    if (!user || !user.userId) {
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    try {
+        // Get subscription from DB
+        const result = await pool.query(`
+            SELECT * FROM subscriptions
+            WHERE user_id = $1
+            ORDER BY created_at DESC
+            LIMIT 1
+        `, [user.userId]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'No subscription found' });
+        }
+
+        const subscription = result.rows[0];
+
+        if (!subscription.stripe_subscription_id) {
+            return res.status(400).json({ error: 'No Stripe subscription to cancel' });
+        }
+
+        // Cancel at period end (user keeps access until end of billing period)
+        const canceledSubscription = await stripe.subscriptions.update(
+            subscription.stripe_subscription_id,
+            { cancel_at_period_end: true }
+        ) as any;
+
+        // Update DB
+        await pool.query(`
+            UPDATE subscriptions
+            SET status = 'canceled', updated_at = CURRENT_TIMESTAMP
+            WHERE id = $1
+        `, [subscription.id]);
+
+        res.json({
+            message: 'Subscription canceled successfully',
+            canceledAt: canceledSubscription.cancel_at
+                ? new Date(canceledSubscription.cancel_at * 1000).toISOString()
+                : null,
+            accessUntil: canceledSubscription.current_period_end
+                ? new Date(canceledSubscription.current_period_end * 1000).toISOString()
+                : null
+        });
+    } catch (error: any) {
+        console.error('Cancel subscription failed:', error);
+        res.status(500).json({ error: error.message || 'Failed to cancel subscription' });
     }
 };

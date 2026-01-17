@@ -52,7 +52,21 @@ export const login = async (req: Request, res: Response) => {
     const { email, password } = req.body;
 
     try {
-        const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+        // Query with company and industry information
+        const result = await pool.query(`
+            SELECT
+                u.*,
+                c.id as company_id,
+                c.name as company_name,
+                c.industry_type_id,
+                it.code as industry_code,
+                it.name_ja as industry_name
+            FROM users u
+            LEFT JOIN companies c ON u.company_id = c.id
+            LEFT JOIN industry_types it ON c.industry_type_id = it.id
+            WHERE u.email = $1
+        `, [email]);
+
         if (result.rows.length === 0) {
             return res.status(401).json({ error: 'Invalid credentials' });
         }
@@ -65,7 +79,7 @@ export const login = async (req: Request, res: Response) => {
         }
 
         const token = jwt.sign(
-            { userId: user.id, email: user.email, userType: user.user_type },
+            { userId: user.id, email: user.email, userType: user.user_type, companyId: user.company_id },
             JWT_SECRET,
             { expiresIn: '24h' }
         );
@@ -73,7 +87,17 @@ export const login = async (req: Request, res: Response) => {
         res.json({
             message: 'Login successful',
             token,
-            user: { id: user.id, name: user.name, email: user.email, user_type: user.user_type }
+            user: {
+                id: user.id,
+                name: user.name,
+                email: user.email,
+                user_type: user.user_type,
+                company_id: user.company_id,
+                company_name: user.company_name,
+                industry_type_id: user.industry_type_id,
+                industry_code: user.industry_code,
+                industry_name: user.industry_name
+            }
         });
     } catch (error) {
         console.error(error);

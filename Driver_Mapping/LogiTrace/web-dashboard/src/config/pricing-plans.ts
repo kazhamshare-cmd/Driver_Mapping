@@ -23,6 +23,7 @@ export interface Plan {
         yearlyReports: boolean;
         dataRetention: string; // '3ヶ月', '1年', '無制限'
         apiAccess: boolean;
+        apiDescription?: string; // API連携の説明（プロプラン以上）
         support: string;
     };
     recommended?: boolean;
@@ -84,6 +85,7 @@ export const PLANS: Plan[] = [
             yearlyReports: true,
             dataRetention: '無制限',
             apiAccess: true,
+            apiDescription: 'REST API（会計・ERPシステム連携用）',
             support: 'メール+電話',
         },
     },
