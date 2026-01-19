@@ -66,6 +66,101 @@ const getResultLabel = (result: string): string => {
     return labels[result] || result;
 };
 
+// ====================================
+// 署名欄描画ヘルパー関数
+// ====================================
+
+interface SignatureBoxOptions {
+    x: number;
+    y: number;
+    width?: number;
+    height?: number;
+    label: string;
+    signatureImage?: string | null; // Base64画像データ
+    signedDate?: string | null;
+    signerName?: string | null;
+}
+
+function drawSignatureBox(
+    doc: PDFKit.PDFDocument,
+    options: SignatureBoxOptions
+): number {
+    const { x, y, width = 150, height = 60, label, signatureImage, signedDate, signerName } = options;
+
+    // 署名欄のラベル
+    doc.fontSize(8).text(label, x, y);
+
+    // 枠線を描画
+    const boxY = y + 12;
+    doc.rect(x, boxY, width, height).stroke();
+
+    // 署名画像がある場合は挿入
+    if (signatureImage && signatureImage.startsWith('data:image')) {
+        try {
+            // Base64から画像データを抽出
+            const base64Data = signatureImage.replace(/^data:image\/\w+;base64,/, '');
+            const imageBuffer = Buffer.from(base64Data, 'base64');
+
+            // 枠内に収まるようにサイズを調整して画像を挿入
+            const imgWidth = width - 10;
+            const imgHeight = height - 20;
+            doc.image(imageBuffer, x + 5, boxY + 5, {
+                fit: [imgWidth, imgHeight],
+                align: 'center',
+                valign: 'center'
+            });
+        } catch (e) {
+            // 画像挿入に失敗した場合は空欄のまま
+            console.error('Failed to insert signature image:', e);
+        }
+    }
+
+    // 署名日と署名者名
+    const bottomY = boxY + height + 2;
+    if (signedDate) {
+        doc.fontSize(7).text(`日付: ${signedDate}`, x, bottomY);
+    }
+    if (signerName) {
+        doc.fontSize(7).text(`氏名: ${signerName}`, x + width / 2, bottomY);
+    }
+
+    return bottomY + 15;
+}
+
+// 複数の署名欄を横並びで描画
+function drawSignatureRow(
+    doc: PDFKit.PDFDocument,
+    y: number,
+    signatures: Array<{
+        label: string;
+        signatureImage?: string | null;
+        signedDate?: string | null;
+        signerName?: string | null;
+    }>
+): number {
+    const boxWidth = 150;
+    const spacing = 20;
+    const startX = 40;
+    let maxBottomY = y;
+
+    signatures.forEach((sig, index) => {
+        const bottomY = drawSignatureBox(doc, {
+            x: startX + index * (boxWidth + spacing),
+            y: y,
+            width: boxWidth,
+            label: sig.label,
+            signatureImage: sig.signatureImage,
+            signedDate: sig.signedDate,
+            signerName: sig.signerName
+        });
+        if (bottomY > maxBottomY) {
+            maxBottomY = bottomY;
+        }
+    });
+
+    return maxBottomY;
+}
+
 // Generate Tenko Records PDF
 export async function generateTenkoPDF(
     companyId: number,
@@ -274,23 +369,29 @@ export async function generateInspectionPDF(
     });
 }
 
-// Generate Daily Report PDF
+// Generate Daily Report PDF (with signature fields)
 export async function generateDailyReportPDF(
     companyId: number,
     dateFrom: string,
     dateTo: string,
-    driverIds: number[] | null
+    driverIds: number[] | null,
+    includeSignatures: boolean = true
 ): Promise<Buffer> {
-    // Fetch work records
+    // Fetch work records with manager confirmation
     let query = `
         SELECT
             w.*,
             d.name as driver_name,
-            v.vehicle_number
+            v.vehicle_number,
+            approver.name as approver_name,
+            mc.signature_data as manager_signature,
+            mc.confirmed_at as approved_at
         FROM work_records w
         LEFT JOIN users d ON w.driver_id = d.id
         LEFT JOIN vehicles v ON w.vehicle_id = v.id
-        WHERE w.company_id = $1
+        LEFT JOIN users approver ON w.approved_by = approver.id
+        LEFT JOIN manager_confirmations mc ON mc.work_record_id = w.id AND mc.action = 'approve'
+        WHERE d.company_id = $1
         AND w.work_date BETWEEN $2 AND $3
     `;
     const params: any[] = [companyId, dateFrom, dateTo];
@@ -304,6 +405,13 @@ export async function generateDailyReportPDF(
     const result = await pool.query(query, params);
     const records = result.rows;
 
+    // Get company info for header
+    const companyResult = await pool.query(
+        `SELECT name, operation_manager_name FROM companies WHERE id = $1`,
+        [companyId]
+    );
+    const company = companyResult.rows[0] || { name: '-', operation_manager_name: '-' };
+
     return new Promise((resolve, reject) => {
         const chunks: Buffer[] = [];
         const doc = new PDFDocument({ size: 'A4', margin: 40 });
@@ -315,6 +423,7 @@ export async function generateDailyReportPDF(
         // Title
         doc.fontSize(18).text('運転日報', { align: 'center' });
         doc.fontSize(10).text(`期間: ${dateFrom} 〜 ${dateTo}`, { align: 'center' });
+        doc.fontSize(9).text(`事業者: ${company.name}`, { align: 'center' });
         doc.moveDown(2);
 
         if (records.length === 0) {
@@ -336,7 +445,7 @@ export async function generateDailyReportPDF(
 
             let y = startY + 20;
             records.forEach((record: any) => {
-                if (y > 750) {
+                if (y > 650) { // Leave space for signatures
                     doc.addPage();
                     y = 50;
                 }
@@ -363,8 +472,8 @@ export async function generateDailyReportPDF(
                     endTime,
                     record.driver_name || '-',
                     record.distance?.toLocaleString() || '0',
-                    record.break_time?.toString() || '0',
-                    record.status === 'confirmed' ? '確定' : '未確定',
+                    (record.manual_break_minutes || record.auto_break_minutes || record.break_time || 0).toString(),
+                    record.status === 'confirmed' ? '確定' : record.status === 'pending' ? '承認待' : '下書',
                 ];
 
                 rowData.forEach((data, i) => {
@@ -374,6 +483,42 @@ export async function generateDailyReportPDF(
 
                 y += 15;
             });
+
+            // Signature section (at the bottom of the last page)
+            if (includeSignatures) {
+                // Get the last record's signature data for display
+                const lastApprovedRecord = records.find((r: any) => r.manager_signature);
+
+                doc.moveDown(3);
+                if (doc.y > 650) {
+                    doc.addPage();
+                }
+
+                const signatureY = Math.max(doc.y, 680);
+
+                drawSignatureRow(doc, signatureY, [
+                    {
+                        label: '運転者',
+                        signatureImage: null, // Driver signature not stored
+                        signedDate: null,
+                        signerName: null
+                    },
+                    {
+                        label: '運行管理者',
+                        signatureImage: lastApprovedRecord?.manager_signature || null,
+                        signedDate: lastApprovedRecord?.approved_at
+                            ? new Date(lastApprovedRecord.approved_at).toLocaleDateString('ja-JP')
+                            : null,
+                        signerName: lastApprovedRecord?.approver_name || company.operation_manager_name || null
+                    },
+                    {
+                        label: '事業者印',
+                        signatureImage: null,
+                        signedDate: null,
+                        signerName: null
+                    }
+                ]);
+            }
         }
 
         // Footer

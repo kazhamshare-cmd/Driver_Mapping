@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
     View,
     Text,
@@ -9,10 +9,14 @@ import {
     TextInput,
     Alert,
     ActivityIndicator,
+    Image,
+    Modal,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import * as ImagePicker from 'expo-image-picker';
 import { authService, User } from '../services/authService';
 import { API_BASE_URL } from '../config/api';
+import { useDriverAppSettings } from '../contexts/DriverAppSettingsContext';
 
 interface InspectionItem {
     id: number;
@@ -24,6 +28,7 @@ interface InspectionItem {
 
 interface ItemResult {
     result: 'pass' | 'fail';
+    photoUri?: string;
 }
 
 const CATEGORIES: Record<string, string> = {
@@ -62,6 +67,15 @@ export default function InspectionScreen() {
     const [odometerReading, setOdometerReading] = useState('');
     const [issuesFound, setIssuesFound] = useState('');
     const [notes, setNotes] = useState('');
+
+    // Photo preview modal
+    const [photoPreviewVisible, setPhotoPreviewVisible] = useState(false);
+    const [selectedPhotoUri, setSelectedPhotoUri] = useState<string | null>(null);
+    const [selectedItemKey, setSelectedItemKey] = useState<string | null>(null);
+
+    // Driver App Settings
+    const { settings, isFeatureEnabled } = useDriverAppSettings();
+    const showPhotoOption = isFeatureEnabled('inspectionPhotos') && settings.enableInspectionPhotos;
 
     useEffect(() => {
         loadUser();
@@ -105,13 +119,78 @@ export default function InspectionScreen() {
         setItemResults((prev) => ({
             ...prev,
             [itemKey]: {
+                ...prev[itemKey],
                 result: prev[itemKey]?.result === 'pass' ? 'fail' : 'pass',
             },
         }));
     };
 
+    // Take photo for inspection item
+    const takePhoto = useCallback(async (itemKey: string) => {
+        const { status } = await ImagePicker.requestCameraPermissionsAsync();
+        if (status !== 'granted') {
+            Alert.alert('権限が必要です', 'カメラを使用するには権限の許可が必要です。');
+            return;
+        }
+
+        const result = await ImagePicker.launchCameraAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            allowsEditing: false,
+            quality: 0.7,
+            aspect: [4, 3],
+        });
+
+        if (!result.canceled && result.assets[0]) {
+            setItemResults((prev) => ({
+                ...prev,
+                [itemKey]: {
+                    ...prev[itemKey],
+                    photoUri: result.assets[0].uri,
+                },
+            }));
+        }
+    }, []);
+
+    // View photo
+    const viewPhoto = useCallback((itemKey: string, photoUri: string) => {
+        setSelectedItemKey(itemKey);
+        setSelectedPhotoUri(photoUri);
+        setPhotoPreviewVisible(true);
+    }, []);
+
+    // Delete photo
+    const deletePhoto = useCallback((itemKey: string) => {
+        Alert.alert(
+            '写真を削除',
+            'この写真を削除しますか？',
+            [
+                { text: 'キャンセル', style: 'cancel' },
+                {
+                    text: '削除',
+                    style: 'destructive',
+                    onPress: () => {
+                        setItemResults((prev) => ({
+                            ...prev,
+                            [itemKey]: {
+                                ...prev[itemKey],
+                                photoUri: undefined,
+                            },
+                        }));
+                        setPhotoPreviewVisible(false);
+                    },
+                },
+            ]
+        );
+    }, []);
+
     const failCount = Object.values(itemResults).filter((r) => r.result === 'fail').length;
     const passCount = Object.values(itemResults).filter((r) => r.result === 'pass').length;
+    const photoCount = Object.values(itemResults).filter((r) => r.photoUri).length;
+
+    // Check if photo is required for failed items
+    const failedItemsWithoutPhoto = settings.requirePhotoOnFailure
+        ? Object.entries(itemResults).filter(([_, r]) => r.result === 'fail' && !r.photoUri)
+        : [];
 
     const handleSubmit = async () => {
         if (!user) return;
@@ -125,25 +204,63 @@ export default function InspectionScreen() {
             return;
         }
 
+        // Check photo requirement for failed items
+        if (settings.requirePhotoOnFailure && failedItemsWithoutPhoto.length > 0) {
+            Alert.alert(
+                '写真が必要です',
+                '不合格項目には写真の添付が必要です。',
+                [{ text: 'OK' }]
+            );
+            return;
+        }
+
         setLoading(true);
         try {
             const token = await authService.getToken();
+
+            // Prepare form data for photo uploads
+            const formData = new FormData();
+            formData.append('company_id', String(user.companyId));
+            formData.append('vehicle_id', '1'); // TODO: Get from vehicle selection
+            formData.append('driver_id', String(user.id));
+            formData.append('odometer_reading', odometerReading || '');
+            formData.append('notes', notes || '');
+            formData.append('issues_found', issuesFound || '');
+            formData.append('follow_up_required', String(failCount > 0));
+
+            // Add inspection items results
+            const itemResultsForApi: Record<string, { result: string; has_photo: boolean }> = {};
+            Object.entries(itemResults).forEach(([key, value]) => {
+                itemResultsForApi[key] = {
+                    result: value.result,
+                    has_photo: !!value.photoUri,
+                };
+            });
+            formData.append('inspection_items', JSON.stringify(itemResultsForApi));
+
+            // Add photos
+            let photoIndex = 0;
+            Object.entries(itemResults).forEach(([key, value]) => {
+                if (value.photoUri) {
+                    const filename = `inspection_${key}_${Date.now()}.jpg`;
+                    formData.append(`photo_${photoIndex}`, {
+                        uri: value.photoUri,
+                        type: 'image/jpeg',
+                        name: filename,
+                    } as any);
+                    formData.append(`photo_${photoIndex}_item_key`, key);
+                    photoIndex++;
+                }
+            });
+            formData.append('photo_count', String(photoIndex));
+
             const response = await fetch(`${API_BASE_URL}/inspections`, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'multipart/form-data',
                 },
-                body: JSON.stringify({
-                    company_id: user.companyId,
-                    vehicle_id: 1, // TODO: Get from vehicle selection
-                    driver_id: user.id,
-                    inspection_items: itemResults,
-                    odometer_reading: odometerReading ? parseInt(odometerReading) : null,
-                    notes: notes || null,
-                    issues_found: issuesFound || null,
-                    follow_up_required: failCount > 0,
-                }),
+                body: formData,
             });
 
             if (!response.ok) {
@@ -195,6 +312,19 @@ export default function InspectionScreen() {
                             不合格
                         </Text>
                     </View>
+                    {showPhotoOption && (
+                        <>
+                            <View style={styles.summaryDivider} />
+                            <View style={styles.summaryItem}>
+                                <Text style={[styles.summaryValue, { color: '#2196F3' }]}>
+                                    {photoCount}
+                                </Text>
+                                <Text style={[styles.summaryLabel, { color: '#2196F3' }]}>
+                                    写真
+                                </Text>
+                            </View>
+                        </>
+                    )}
                 </View>
 
                 {/* Odometer */}
@@ -218,41 +348,80 @@ export default function InspectionScreen() {
                         <Text style={styles.sectionTitle}>
                             {CATEGORIES[category] || category}
                         </Text>
-                        {categoryItems.map((item) => (
-                            <TouchableOpacity
-                                key={item.item_key}
-                                style={styles.inspectionItem}
-                                onPress={() => handleItemToggle(item.item_key)}
-                            >
-                                <View style={styles.inspectionItemLeft}>
-                                    <Text style={styles.inspectionItemName}>
-                                        {item.item_name_ja}
-                                        {item.is_required && (
-                                            <Text style={styles.requiredMark}> *</Text>
-                                        )}
-                                    </Text>
-                                </View>
-                                <View
-                                    style={[
-                                        styles.inspectionItemStatus,
-                                        itemResults[item.item_key]?.result === 'pass'
-                                            ? styles.statusPass
-                                            : styles.statusFail,
-                                    ]}
-                                >
-                                    <Text
-                                        style={[
-                                            styles.inspectionItemStatusText,
-                                            itemResults[item.item_key]?.result === 'pass'
-                                                ? { color: '#4CAF50' }
-                                                : { color: '#F44336' },
-                                        ]}
+                        {categoryItems.map((item) => {
+                            const result = itemResults[item.item_key];
+                            const isFail = result?.result === 'fail';
+                            const hasPhoto = !!result?.photoUri;
+                            const needsPhoto = settings.requirePhotoOnFailure && isFail && !hasPhoto;
+
+                            return (
+                                <View key={item.item_key} style={styles.inspectionItemContainer}>
+                                    <TouchableOpacity
+                                        style={styles.inspectionItem}
+                                        onPress={() => handleItemToggle(item.item_key)}
                                     >
-                                        {itemResults[item.item_key]?.result === 'pass' ? '○' : '×'}
-                                    </Text>
+                                        <View style={styles.inspectionItemLeft}>
+                                            <Text style={styles.inspectionItemName}>
+                                                {item.item_name_ja}
+                                                {item.is_required && (
+                                                    <Text style={styles.requiredMark}> *</Text>
+                                                )}
+                                            </Text>
+                                            {needsPhoto && (
+                                                <Text style={styles.photoRequiredText}>
+                                                    写真が必要です
+                                                </Text>
+                                            )}
+                                        </View>
+                                        <View
+                                            style={[
+                                                styles.inspectionItemStatus,
+                                                isFail ? styles.statusFail : styles.statusPass,
+                                            ]}
+                                        >
+                                            <Text
+                                                style={[
+                                                    styles.inspectionItemStatusText,
+                                                    isFail ? { color: '#F44336' } : { color: '#4CAF50' },
+                                                ]}
+                                            >
+                                                {isFail ? '×' : '○'}
+                                            </Text>
+                                        </View>
+                                    </TouchableOpacity>
+
+                                    {/* Photo Options (when enabled) */}
+                                    {showPhotoOption && (
+                                        <View style={styles.photoActions}>
+                                            {hasPhoto ? (
+                                                <TouchableOpacity
+                                                    style={styles.photoPreviewButton}
+                                                    onPress={() => viewPhoto(item.item_key, result.photoUri!)}
+                                                >
+                                                    <Image
+                                                        source={{ uri: result.photoUri }}
+                                                        style={styles.photoThumbnail}
+                                                    />
+                                                    <Text style={styles.photoPreviewText}>写真を確認</Text>
+                                                </TouchableOpacity>
+                                            ) : (
+                                                <TouchableOpacity
+                                                    style={[
+                                                        styles.addPhotoButton,
+                                                        needsPhoto && styles.addPhotoButtonRequired,
+                                                    ]}
+                                                    onPress={() => takePhoto(item.item_key)}
+                                                >
+                                                    <Text style={styles.addPhotoButtonText}>
+                                                        📷 写真を追加
+                                                    </Text>
+                                                </TouchableOpacity>
+                                            )}
+                                        </View>
+                                    )}
                                 </View>
-                            </TouchableOpacity>
-                        ))}
+                            );
+                        })}
                     </View>
                 ))}
 
@@ -289,9 +458,10 @@ export default function InspectionScreen() {
                     style={[
                         styles.submitButton,
                         failCount > 0 && styles.submitButtonWarning,
+                        (settings.requirePhotoOnFailure && failedItemsWithoutPhoto.length > 0) && styles.submitButtonDisabled,
                     ]}
                     onPress={handleSubmit}
-                    disabled={loading}
+                    disabled={loading || (settings.requirePhotoOnFailure && failedItemsWithoutPhoto.length > 0)}
                 >
                     {loading ? (
                         <ActivityIndicator color="white" />
@@ -304,8 +474,52 @@ export default function InspectionScreen() {
 
                 <Text style={styles.footerNote}>
                     ※ タップで合格/不合格を切り替えられます
+                    {showPhotoOption && '\n※ 写真を追加して証跡を残すことができます'}
                 </Text>
             </ScrollView>
+
+            {/* Photo Preview Modal */}
+            <Modal
+                visible={photoPreviewVisible}
+                animationType="fade"
+                transparent={true}
+                onRequestClose={() => setPhotoPreviewVisible(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.photoModalContent}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>写真プレビュー</Text>
+                            <TouchableOpacity onPress={() => setPhotoPreviewVisible(false)}>
+                                <Text style={styles.modalCloseText}>×</Text>
+                            </TouchableOpacity>
+                        </View>
+                        {selectedPhotoUri && (
+                            <Image
+                                source={{ uri: selectedPhotoUri }}
+                                style={styles.photoPreviewImage}
+                                resizeMode="contain"
+                            />
+                        )}
+                        <View style={styles.photoModalActions}>
+                            <TouchableOpacity
+                                style={styles.retakeButton}
+                                onPress={() => {
+                                    setPhotoPreviewVisible(false);
+                                    if (selectedItemKey) takePhoto(selectedItemKey);
+                                }}
+                            >
+                                <Text style={styles.retakeButtonText}>撮り直す</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={styles.deletePhotoButton}
+                                onPress={() => selectedItemKey && deletePhoto(selectedItemKey)}
+                            >
+                                <Text style={styles.deletePhotoButtonText}>削除</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
         </SafeAreaView>
     );
 }
@@ -398,13 +612,17 @@ const styles = StyleSheet.create({
         color: '#666',
         marginLeft: 12,
     },
+    inspectionItemContainer: {
+        borderBottomWidth: 1,
+        borderBottomColor: '#F0F0F0',
+        paddingBottom: 8,
+        marginBottom: 8,
+    },
     inspectionItem: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingVertical: 12,
-        borderBottomWidth: 1,
-        borderBottomColor: '#F0F0F0',
+        paddingVertical: 8,
     },
     inspectionItemLeft: {
         flex: 1,
@@ -415,6 +633,11 @@ const styles = StyleSheet.create({
     },
     requiredMark: {
         color: '#F44336',
+    },
+    photoRequiredText: {
+        fontSize: 12,
+        color: '#F44336',
+        marginTop: 4,
     },
     inspectionItemStatus: {
         width: 44,
@@ -432,6 +655,43 @@ const styles = StyleSheet.create({
     inspectionItemStatusText: {
         fontSize: 24,
         fontWeight: 'bold',
+    },
+    photoActions: {
+        marginTop: 8,
+    },
+    addPhotoButton: {
+        backgroundColor: '#E3F2FD',
+        borderRadius: 8,
+        paddingVertical: 8,
+        paddingHorizontal: 12,
+        alignSelf: 'flex-start',
+    },
+    addPhotoButtonRequired: {
+        backgroundColor: '#FFEBEE',
+        borderWidth: 1,
+        borderColor: '#F44336',
+    },
+    addPhotoButtonText: {
+        fontSize: 14,
+        color: '#2196F3',
+    },
+    photoPreviewButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#F5F5F5',
+        borderRadius: 8,
+        padding: 8,
+        alignSelf: 'flex-start',
+    },
+    photoThumbnail: {
+        width: 40,
+        height: 40,
+        borderRadius: 4,
+        marginRight: 8,
+    },
+    photoPreviewText: {
+        fontSize: 14,
+        color: '#666',
     },
     textInput: {
         borderWidth: 1,
@@ -451,6 +711,9 @@ const styles = StyleSheet.create({
     submitButtonWarning: {
         backgroundColor: '#FF9800',
     },
+    submitButtonDisabled: {
+        backgroundColor: '#BDBDBD',
+    },
     submitButtonText: {
         color: 'white',
         fontSize: 18,
@@ -461,5 +724,72 @@ const styles = StyleSheet.create({
         color: '#999',
         fontSize: 12,
         marginTop: 16,
+        lineHeight: 18,
+    },
+    // Modal styles
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    photoModalContent: {
+        backgroundColor: '#FFF',
+        borderRadius: 12,
+        width: '90%',
+        maxHeight: '80%',
+    },
+    modalHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: 16,
+        borderBottomWidth: 1,
+        borderBottomColor: '#E0E0E0',
+    },
+    modalTitle: {
+        fontSize: 18,
+        fontWeight: '600',
+        color: '#333',
+    },
+    modalCloseText: {
+        fontSize: 28,
+        color: '#666',
+        lineHeight: 28,
+    },
+    photoPreviewImage: {
+        width: '100%',
+        height: 300,
+        backgroundColor: '#F5F5F5',
+    },
+    photoModalActions: {
+        flexDirection: 'row',
+        justifyContent: 'space-around',
+        padding: 16,
+        gap: 12,
+    },
+    retakeButton: {
+        flex: 1,
+        backgroundColor: '#E0E0E0',
+        borderRadius: 8,
+        padding: 12,
+        alignItems: 'center',
+    },
+    retakeButtonText: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#666',
+    },
+    deletePhotoButton: {
+        flex: 1,
+        backgroundColor: '#FFEBEE',
+        borderRadius: 8,
+        padding: 12,
+        alignItems: 'center',
+    },
+    deletePhotoButtonText: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#F44336',
     },
 });

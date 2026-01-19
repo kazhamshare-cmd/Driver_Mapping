@@ -1,7 +1,7 @@
 export const PlanType = {
-    SMALL: 'small',
-    STANDARD: 'standard',
-    PRO: 'pro',
+    FREE: 'free',
+    STARTER: 'starter',
+    PROFESSIONAL: 'professional',
     ENTERPRISE: 'enterprise',
 } as const;
 
@@ -10,119 +10,127 @@ export type PlanType = typeof PlanType[keyof typeof PlanType];
 export interface Plan {
     id: PlanType;
     name: string;
-    price: number; // Monthly price
+    price: number;
     minDrivers: number;
-    maxDrivers: number | null; // null for unlimited (or consult)
+    maxDrivers: number | null;
     description: string;
     features: {
-        adminCount: string; // '1名' or '無制限'
+        adminCount: string;
         gpsTracking: boolean;
         dailyReports: boolean;
         pdfExport: boolean;
         monthlyReports: boolean;
-        yearlyReports: boolean;
-        dataRetention: string; // '3ヶ月', '1年', '無制限'
+        digitalSignature: boolean;
+        tachographIntegration: boolean;
+        dataRetention: string;
         apiAccess: boolean;
         support: string;
     };
     recommended?: boolean;
+    hidden?: boolean;
 }
 
 export const PLANS: Plan[] = [
     {
-        id: PlanType.SMALL,
-        name: 'スモールプラン',
-        price: 1980,
+        id: PlanType.FREE,
+        name: 'フリー',
+        price: 0,
         minDrivers: 1,
         maxDrivers: 3,
-        description: '小規模事業者向け',
+        description: '個人事業主・お試し用',
         features: {
             adminCount: '1名',
             gpsTracking: true,
             dailyReports: true,
             pdfExport: true,
             monthlyReports: false,
-            yearlyReports: false,
+            digitalSignature: false,
+            tachographIntegration: false,
             dataRetention: '3ヶ月',
             apiAccess: false,
             support: 'メール',
         },
+        hidden: true,
     },
     {
-        id: PlanType.STANDARD,
-        name: 'スタンダードプラン',
-        price: 4980,
-        minDrivers: 4,
+        id: PlanType.STARTER,
+        name: 'スターター',
+        price: 5800,
+        minDrivers: 1,
         maxDrivers: 10,
-        description: '中小規模事業者向け',
+        description: '小規模事業者向け',
         features: {
-            adminCount: '無制限',
+            adminCount: '3名',
             gpsTracking: true,
             dailyReports: true,
             pdfExport: true,
             monthlyReports: true,
-            yearlyReports: false,
+            digitalSignature: false,
+            tachographIntegration: false,
             dataRetention: '1年',
             apiAccess: false,
             support: 'メール',
         },
-        recommended: true,
     },
     {
-        id: PlanType.PRO,
-        name: 'プロプラン',
-        price: 9980,
-        minDrivers: 11,
-        maxDrivers: 30,
-        description: '大規模事業者向け',
+        id: PlanType.PROFESSIONAL,
+        name: 'プロフェッショナル',
+        price: 9800,
+        minDrivers: 1,
+        maxDrivers: 50,
+        description: '中規模事業者向け',
         features: {
             adminCount: '無制限',
             gpsTracking: true,
             dailyReports: true,
             pdfExport: true,
             monthlyReports: true,
-            yearlyReports: true,
-            dataRetention: '無制限',
+            digitalSignature: true,
+            tachographIntegration: true,
+            dataRetention: '3年',
             apiAccess: true,
             support: 'メール+電話',
         },
+        recommended: true,
     },
     {
         id: PlanType.ENTERPRISE,
         name: 'エンタープライズ',
-        price: 0, // Price on request
-        minDrivers: 31,
+        price: 0,
+        minDrivers: 51,
         maxDrivers: null,
-        description: '特大規模向けカスタマイズ対応',
+        description: '大規模事業者向けカスタマイズ',
         features: {
             adminCount: '無制限',
             gpsTracking: true,
             dailyReports: true,
             pdfExport: true,
             monthlyReports: true,
-            yearlyReports: true,
+            digitalSignature: true,
+            tachographIntegration: true,
             dataRetention: '無制限',
             apiAccess: true,
-            support: '専任担当者',
+            support: '専任担当',
         },
     },
 ];
 
 export const getAllPlans = () => PLANS;
 
+export const getDisplayPlans = () => PLANS.filter(p => !p.hidden);
+
 export const getPlanById = (id: string | null): Plan | undefined => {
     if (!id) return undefined;
-    // Helper to check if string matches PlanType value
-    const values = Object.values(PlanType) as string[];
-    if (values.includes(id)) {
-        return PLANS.find((plan) => plan.id === id);
-    }
-    return undefined;
+    return PLANS.find((plan) => plan.id === id);
 };
 
 export const getRecommendedPlan = (driverCount: number): Plan | undefined => {
-    return PLANS.find((plan) => {
+    return PLANS.filter(p => !p.hidden).find((plan) => {
         if (plan.maxDrivers === null) return driverCount >= plan.minDrivers;
         return driverCount >= plan.minDrivers && driverCount <= plan.maxDrivers;
     });
+};
+
+export const formatPrice = (price: number): string => {
+    return `¥${price.toLocaleString()}`;
 };

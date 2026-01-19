@@ -1,19 +1,9 @@
-// API Configuration
-// Replace with your actual API URL in production
-export const API_BASE_URL = 'https://haisha-pro.com/api';
+// Replace with your local machine's IP address for testing on device
+// e.g., 'http://192.168.1.10:3000'
+export const API_URL = 'http://localhost:3000';
 
-// API Endpoints
-export const API_ENDPOINTS = {
-    // Auth
+export const ENDPOINTS = {
     LOGIN: '/auth/login',
-    REGISTER: '/drivers/register-by-code',
-
-    // Work Records
+    REGISTER: '/auth/register',
     WORK_RECORDS: '/work-records',
-    START_WORK: '/work-records/start',
-    END_WORK: '/work-records/end',
-    UPDATE_LOCATION: '/work-records/location',
-
-    // Driver Info
-    DRIVER_PROFILE: '/drivers/me',
 };

@@ -1,57 +1,18 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, SafeAreaView, Linking, ActivityIndicator } from 'react-native';
-import { authService } from '../services/authService';
+import React, { useState } from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, SafeAreaView, Linking } from 'react-native';
 
 export default function LoginScreen({ navigation }: any) {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [loading, setLoading] = useState(false);
-    const [checkingAuth, setCheckingAuth] = useState(true);
 
-    // Check if user is already logged in
-    useEffect(() => {
-        checkAuth();
-    }, []);
-
-    const checkAuth = async () => {
-        try {
-            const isLoggedIn = await authService.isLoggedIn();
-            if (isLoggedIn) {
-                navigation.replace('ModeSelection');
-            }
-        } catch (error) {
-            console.error('Auth check failed:', error);
-        } finally {
-            setCheckingAuth(false);
-        }
-    };
-
-    const handleLogin = async () => {
-        if (!email || !password) {
-            Alert.alert('エラー', 'メールアドレスとパスワードを入力してください');
-            return;
-        }
-
-        setLoading(true);
-        try {
-            await authService.login(email, password);
+    const handleLogin = () => {
+        // Dummy login
+        if (email && password) {
             navigation.replace('ModeSelection');
-        } catch (error: any) {
-            Alert.alert('ログインエラー', error.message || 'ログインに失敗しました');
-        } finally {
-            setLoading(false);
+        } else {
+            Alert.alert('エラー', 'メールアドレスとパスワードを入力してください');
         }
     };
-
-    if (checkingAuth) {
-        return (
-            <SafeAreaView style={styles.container}>
-                <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="large" color="#4CAF50" />
-                </View>
-            </SafeAreaView>
-        );
-    }
 
     return (
         <SafeAreaView style={styles.container}>
@@ -79,23 +40,8 @@ export default function LoginScreen({ navigation }: any) {
                         secureTextEntry
                     />
 
-                    <TouchableOpacity
-                        style={[styles.button, loading && styles.buttonDisabled]}
-                        onPress={handleLogin}
-                        disabled={loading}
-                    >
-                        {loading ? (
-                            <ActivityIndicator color="white" />
-                        ) : (
-                            <Text style={styles.buttonText}>ログイン</Text>
-                        )}
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                        style={styles.registerButton}
-                        onPress={() => navigation.navigate('Register')}
-                    >
-                        <Text style={styles.registerButtonText}>新規登録（会社コードをお持ちの方）</Text>
+                    <TouchableOpacity style={styles.button} onPress={handleLogin}>
+                        <Text style={styles.buttonText}>ログイン</Text>
                     </TouchableOpacity>
 
                     <View style={styles.helpContainer}>
@@ -121,11 +67,6 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#F5F7FA',
-    },
-    loadingContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
     },
     content: {
         flex: 1,
@@ -194,18 +135,5 @@ const styles = StyleSheet.create({
         width: 1,
         height: 12,
         backgroundColor: '#ddd',
-    },
-    buttonDisabled: {
-        opacity: 0.6,
-    },
-    registerButton: {
-        padding: 16,
-        alignItems: 'center',
-        marginTop: 16,
-    },
-    registerButtonText: {
-        color: '#4CAF50',
-        fontSize: 14,
-        fontWeight: '600',
     },
 });

@@ -28,7 +28,9 @@ import {
     Edit as EditIcon,
     Delete as DeleteIcon,
     ContentCopy as CopyIcon,
-    Link as LinkIcon
+    Link as LinkIcon,
+    VpnKey as KeyIcon,
+    Warning as WarningIcon
 } from '@mui/icons-material';
 
 interface Driver {
@@ -46,19 +48,33 @@ interface CompanyInfo {
     name: string;
 }
 
+interface DriverUsage {
+    canAdd: boolean;
+    current: number;
+    max: number;
+    message?: string;
+    plan: {
+        plan_id: string;
+        status: string;
+    };
+}
+
 export default function DriverList() {
     const [drivers, setDrivers] = useState<Driver[]>([]);
     const [companyInfo, setCompanyInfo] = useState<CompanyInfo | null>(null);
+    const [driverUsage, setDriverUsage] = useState<DriverUsage | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
-    const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
+    const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' | 'info' | 'warning' });
 
     // ダイアログ状態
     const [addDialogOpen, setAddDialogOpen] = useState(false);
     const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
     const [editDialogOpen, setEditDialogOpen] = useState(false);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [resetPasswordDialogOpen, setResetPasswordDialogOpen] = useState(false);
     const [selectedDriver, setSelectedDriver] = useState<Driver | null>(null);
+    const [newPassword, setNewPassword] = useState<string | null>(null);
 
     // フォーム状態
     const [formData, setFormData] = useState({
@@ -75,6 +91,7 @@ export default function DriverList() {
     useEffect(() => {
         fetchDrivers();
         fetchCompanyInfo();
+        fetchDriverUsage();
     }, []);
 
     const fetchDrivers = async () => {
@@ -110,6 +127,22 @@ export default function DriverList() {
         }
     };
 
+    const fetchDriverUsage = async () => {
+        try {
+            const response = await fetch(`/api/drivers/usage?companyId=${companyId}`, {
+                headers: {
+                    'Authorization': `Bearer ${user.token}`
+                }
+            });
+            if (response.ok) {
+                const data = await response.json();
+                setDriverUsage(data);
+            }
+        } catch (err) {
+            console.error('Failed to fetch driver usage');
+        }
+    };
+
     const handleAddDriver = async () => {
         try {
             const response = await fetch('/api/drivers', {
@@ -133,6 +166,7 @@ export default function DriverList() {
             setAddDialogOpen(false);
             resetForm();
             fetchDrivers();
+            fetchDriverUsage();
         } catch (err: any) {
             setSnackbar({ open: true, message: err.message, severity: 'error' });
         }
@@ -211,8 +245,32 @@ export default function DriverList() {
             setDeleteDialogOpen(false);
             setSelectedDriver(null);
             fetchDrivers();
+            fetchDriverUsage();
         } catch (err) {
             setSnackbar({ open: true, message: '削除に失敗しました', severity: 'error' });
+        }
+    };
+
+    const handleResetPassword = async () => {
+        if (!selectedDriver) return;
+
+        try {
+            const response = await fetch(`/api/drivers/${selectedDriver.id}/reset-password`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${user.token}`
+                },
+                body: JSON.stringify({ companyId })
+            });
+
+            if (!response.ok) throw new Error('Failed to reset password');
+
+            const data = await response.json();
+            setNewPassword(data.newPassword);
+            setSnackbar({ open: true, message: 'パスワードを再発行しました', severity: 'success' });
+        } catch (err) {
+            setSnackbar({ open: true, message: 'パスワード再発行に失敗しました', severity: 'error' });
         }
     };
 
@@ -276,6 +334,7 @@ export default function DriverList() {
                         startIcon={<LinkIcon />}
                         onClick={() => { resetForm(); setInviteDialogOpen(true); }}
                         sx={{ mr: 1 }}
+                        disabled={driverUsage ? !driverUsage.canAdd : false}
                     >
                         招待リンク生成
                     </Button>
@@ -283,11 +342,54 @@ export default function DriverList() {
                         variant="contained"
                         startIcon={<AddIcon />}
                         onClick={() => { resetForm(); setAddDialogOpen(true); }}
+                        disabled={driverUsage ? !driverUsage.canAdd : false}
                     >
                         ドライバー追加
                     </Button>
                 </Box>
             </Box>
+
+            {/* ドライバー利用状況 */}
+            {driverUsage && (
+                <Card sx={{ mb: 3, bgcolor: driverUsage.canAdd ? '#e8f5e9' : '#fff3e0' }}>
+                    <CardContent>
+                        <Box display="flex" justifyContent="space-between" alignItems="center">
+                            <Box>
+                                <Typography variant="subtitle2" color="text.secondary">
+                                    ドライバー登録状況
+                                </Typography>
+                                <Box display="flex" alignItems="baseline" gap={1}>
+                                    <Typography variant="h4" fontWeight="bold" color={driverUsage.canAdd ? 'success.main' : 'warning.main'}>
+                                        {driverUsage.current}
+                                    </Typography>
+                                    <Typography variant="h6" color="text.secondary">
+                                        / {driverUsage.max} 名
+                                    </Typography>
+                                </Box>
+                                {!driverUsage.canAdd && (
+                                    <Box display="flex" alignItems="center" gap={0.5} mt={1}>
+                                        <WarningIcon fontSize="small" color="warning" />
+                                        <Typography variant="caption" color="warning.main">
+                                            上限に達しています。プランをアップグレードしてください。
+                                        </Typography>
+                                    </Box>
+                                )}
+                            </Box>
+                            <Box textAlign="right">
+                                <Chip
+                                    label={driverUsage.plan.plan_id === 'free' ? 'フリー' :
+                                           driverUsage.plan.plan_id === 'starter' ? 'スターター' :
+                                           driverUsage.plan.plan_id === 'professional' ? 'プロフェッショナル' :
+                                           driverUsage.plan.plan_id === 'enterprise' ? 'エンタープライズ' :
+                                           driverUsage.plan.plan_id}
+                                    color="primary"
+                                    variant="outlined"
+                                />
+                            </Box>
+                        </Box>
+                    </CardContent>
+                </Card>
+            )}
 
             {/* 会社コード表示 */}
             {companyInfo && (
@@ -349,8 +451,22 @@ export default function DriverList() {
                                         {new Date(driver.created_at).toLocaleDateString('ja-JP')}
                                     </TableCell>
                                     <TableCell align="right">
-                                        <IconButton onClick={() => openEditDialog(driver)}>
+                                        <IconButton
+                                            onClick={() => openEditDialog(driver)}
+                                            title="編集"
+                                        >
                                             <EditIcon />
+                                        </IconButton>
+                                        <IconButton
+                                            onClick={() => {
+                                                setSelectedDriver(driver);
+                                                setNewPassword(null);
+                                                setResetPasswordDialogOpen(true);
+                                            }}
+                                            title="パスワード再発行"
+                                            disabled={driver.status !== 'active'}
+                                        >
+                                            <KeyIcon />
                                         </IconButton>
                                         <IconButton
                                             color="error"
@@ -358,6 +474,7 @@ export default function DriverList() {
                                                 setSelectedDriver(driver);
                                                 setDeleteDialogOpen(true);
                                             }}
+                                            title="削除"
                                         >
                                             <DeleteIcon />
                                         </IconButton>
@@ -500,6 +617,70 @@ export default function DriverList() {
                 <DialogActions>
                     <Button onClick={() => setDeleteDialogOpen(false)}>キャンセル</Button>
                     <Button color="error" variant="contained" onClick={handleDeleteDriver}>削除</Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* パスワード再発行ダイアログ */}
+            <Dialog
+                open={resetPasswordDialogOpen}
+                onClose={() => { setResetPasswordDialogOpen(false); setNewPassword(null); }}
+                maxWidth="sm"
+                fullWidth
+            >
+                <DialogTitle>パスワード再発行</DialogTitle>
+                <DialogContent>
+                    {!newPassword ? (
+                        <>
+                            <Typography gutterBottom>
+                                {selectedDriver?.name}（{selectedDriver?.email}）のパスワードを再発行しますか？
+                            </Typography>
+                            <Alert severity="info" sx={{ mt: 2 }}>
+                                新しいパスワードが生成され、この画面に表示されます。
+                                メール送信は行われません。
+                            </Alert>
+                        </>
+                    ) : (
+                        <>
+                            <Alert severity="success" sx={{ mb: 2 }}>
+                                パスワードを再発行しました
+                            </Alert>
+                            <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                                新しいパスワード
+                            </Typography>
+                            <Box
+                                sx={{
+                                    p: 2,
+                                    bgcolor: '#f5f5f5',
+                                    borderRadius: 1,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between'
+                                }}
+                            >
+                                <Typography variant="h5" fontFamily="monospace" fontWeight="bold">
+                                    {newPassword}
+                                </Typography>
+                                <IconButton onClick={() => copyToClipboard(newPassword)}>
+                                    <CopyIcon />
+                                </IconButton>
+                            </Box>
+                            <Alert severity="warning" sx={{ mt: 2 }}>
+                                このパスワードをドライバーに伝えてください。この画面を閉じると再表示できません。
+                            </Alert>
+                        </>
+                    )}
+                </DialogContent>
+                <DialogActions>
+                    {!newPassword ? (
+                        <>
+                            <Button onClick={() => setResetPasswordDialogOpen(false)}>キャンセル</Button>
+                            <Button variant="contained" onClick={handleResetPassword}>再発行</Button>
+                        </>
+                    ) : (
+                        <Button variant="contained" onClick={() => { setResetPasswordDialogOpen(false); setNewPassword(null); }}>
+                            閉じる
+                        </Button>
+                    )}
                 </DialogActions>
             </Dialog>
 

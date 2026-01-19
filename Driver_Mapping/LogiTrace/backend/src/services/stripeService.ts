@@ -1,8 +1,15 @@
 import Stripe from 'stripe';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
-    apiVersion: '2024-12-18.acacia' as any,
+const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || 'sk_test_PLACEHOLDER';
+const stripe = new Stripe(STRIPE_SECRET_KEY, {
+    apiVersion: '2024-12-18.acacia' as any, // Updated to a recent version
 });
+
+// Price IDs (Replace with real ones from Stripe Dashboard)
+export const PRICE_IDS = {
+    MONTHLY: 'price_PLACEHOLDER_MONTHLY',
+    YEARLY: 'price_PLACEHOLDER_YEARLY',
+};
 
 export class StripeService {
     static async createCustomer(email: string, name: string) {

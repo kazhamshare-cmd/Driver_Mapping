@@ -1,34 +1,38 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { UserPlus, AlertCircle, CheckCircle, CreditCard } from 'lucide-react';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
-import { PlanType, getRecommendedPlan, getPlanById } from '../config/pricing-plans';
-import {
-    Alert,
-    Box,
-    Button,
-    Checkbox,
-    Container,
-    FormControlLabel,
-    Grid,
-    Paper,
-    Step,
-    StepLabel,
-    Stepper,
-    TextField,
-    Typography,
-} from '@mui/material';
-import UserPlus from '@mui/icons-material/PersonAdd';
-import AlertCircle from '@mui/icons-material/ErrorOutline';
+import { PlanType, getRecommendedPlan, getPlanById, getDisplayPlans } from '../config/pricing-plans';
 
-// Stripe Publishable Key from environment variable
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || '');
+// TODO: Replace with your actual Stripe Publishable Key
+const stripePromise = loadStripe('pk_test_PLACEHOLDER');
 
-const RegisterForm = ({ intentType, onSuccess }: { intentType: 'setup' | 'payment', onSuccess: () => void }) => {
+const API_BASE = 'http://52.69.62.236:3000';
+
+interface RegisterFormProps {
+    selectedPlanId: PlanType;
+    driverCount: number;
+    name: string;
+    email: string;
+    password: string;
+    setError: (error: string) => void;
+    setLoading: (loading: boolean) => void;
+}
+
+const RegisterFormWithPayment = ({
+    selectedPlanId,
+    driverCount,
+    name,
+    email,
+    password,
+    setError,
+    setLoading
+}: RegisterFormProps) => {
     const stripe = useStripe();
     const elements = useElements();
-    const [message, setMessage] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
+    const navigate = useNavigate();
+    const [isProcessing, setIsProcessing] = useState(false);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -37,54 +41,119 @@ const RegisterForm = ({ intentType, onSuccess }: { intentType: 'setup' | 'paymen
             return;
         }
 
-        setIsLoading(true);
+        setIsProcessing(true);
+        setError('');
 
-        const result = intentType === 'setup'
-            ? await stripe.confirmSetup({
+        try {
+            // 1. Confirm the setup intent to get the payment method
+            const { error: submitError, setupIntent } = await stripe.confirmSetup({
                 elements,
-                confirmParams: { return_url: window.location.origin + '/dashboard' },
-                redirect: 'if_required'
-            })
-            : await stripe.confirmPayment({
-                elements,
-                confirmParams: { return_url: window.location.origin + '/dashboard' },
+                confirmParams: {
+                    return_url: window.location.origin + '/dashboard',
+                },
                 redirect: 'if_required'
             });
 
-        if (result.error) {
-            setMessage(result.error.message || 'Payment failed');
-            setIsLoading(false);
-        } else {
-            onSuccess();
+            if (submitError) {
+                setError(submitError.message || 'Payment method setup failed');
+                setIsProcessing(false);
+                return;
+            }
+
+            if (!setupIntent || !setupIntent.payment_method) {
+                setError('Payment method could not be retrieved');
+                setIsProcessing(false);
+                return;
+            }
+
+            const paymentMethodId = setupIntent.payment_method as string;
+
+            // 2. Register User
+            const regResponse = await fetch(`${API_BASE}/auth/register`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, email, password, user_type: 'admin' }),
+            });
+            const regData = await regResponse.json();
+            if (!regResponse.ok) throw new Error(regData.error || 'Registration failed');
+
+            const token = regData.token;
+            localStorage.setItem('token', token);
+
+            // 3. Create Subscription with Payment Method
+            const subResponse = await fetch(`${API_BASE}/billing/create-subscription`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    planId: selectedPlanId,
+                    driverCount: driverCount,
+                    paymentMethodId: paymentMethodId
+                }),
+            });
+            const subData = await subResponse.json();
+            if (!subResponse.ok) throw new Error(subData.error || 'Subscription creation failed');
+
+            // Success!
+            alert('登録完了！14日間の無料トライアルが開始されました。');
+            navigate('/dashboard');
+
+        } catch (err: any) {
+            setError(err.message || 'Registration failed. Please try again.');
+        } finally {
+            setIsProcessing(false);
+            setLoading(false);
         }
     };
 
     return (
         <form onSubmit={handleSubmit}>
-            <PaymentElement />
-            <Button
-                disabled={isLoading || !stripe || !elements}
-                fullWidth
-                variant="contained"
-                sx={{ mt: 3, mb: 2 }}
+            <div style={{ marginBottom: '24px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                    <CreditCard size={20} color="var(--primary-color)" />
+                    <span style={{ fontWeight: 'bold', color: '#333' }}>クレジットカード情報</span>
+                </div>
+                <div style={{
+                    backgroundColor: '#f8f9fa',
+                    padding: '16px',
+                    borderRadius: '8px',
+                    border: '1px solid #e0e0e0'
+                }}>
+                    <PaymentElement />
+                </div>
+                <p style={{ fontSize: '12px', color: '#666', marginTop: '8px' }}>
+                    ※ 14日間は完全無料。15日目から自動課金開始。
+                </p>
+            </div>
+
+            <button
+                type="submit"
+                className="btn btn-primary"
+                style={{ width: '100%', padding: '14px', fontSize: '16px' }}
+                disabled={isProcessing || !stripe || !elements}
             >
-                {isLoading ? '処理中...' : '登録してトライアル開始'}
-            </Button>
-            {message && <Alert severity="error">{message}</Alert>}
+                <UserPlus size={20} style={{ marginRight: '8px' }} />
+                {isProcessing ? '処理中...' : '登録してトライアル開始'}
+            </button>
         </form>
     );
 };
 
 export default function Register() {
     const [searchParams] = useSearchParams();
-    const [step, setStep] = useState(0);
-    const [selectedPlanId, setSelectedPlanId] = useState<PlanType>(PlanType.STANDARD);
+    const navigate = useNavigate();
+
+    // Plan & Driver
+    const [selectedPlanId, setSelectedPlanId] = useState<PlanType>(PlanType.STARTER);
     const [driverCount, setDriverCount] = useState<number>(4);
 
     // User Info
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [agreed, setAgreed] = useState(false);
 
     // UI State
     const [error, setError] = useState('');
@@ -92,9 +161,28 @@ export default function Register() {
 
     // Stripe State
     const [clientSecret, setClientSecret] = useState('');
-    const [intentType, setIntentType] = useState<'setup' | 'payment'>('payment');
+    const [setupIntentLoading, setSetupIntentLoading] = useState(true);
 
-    const navigate = useNavigate();
+    // Fetch Setup Intent on mount
+    useEffect(() => {
+        const fetchSetupIntent = async () => {
+            try {
+                const response = await fetch(`${API_BASE}/billing/create-setup-intent`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                });
+                const data = await response.json();
+                if (data.clientSecret) {
+                    setClientSecret(data.clientSecret);
+                }
+            } catch (err) {
+                console.error('Failed to create setup intent:', err);
+            } finally {
+                setSetupIntentLoading(false);
+            }
+        };
+        fetchSetupIntent();
+    }, []);
 
     // Init from URL param
     useEffect(() => {
@@ -102,7 +190,7 @@ export default function Register() {
         if (planParam && Object.values(PlanType).includes(planParam as PlanType)) {
             setSelectedPlanId(planParam as PlanType);
             const plan = getPlanById(planParam);
-            if (plan) setDriverCount(plan.minDrivers);
+            if (plan) setDriverCount(Math.max(plan.minDrivers, 4));
         }
     }, [searchParams]);
 
@@ -115,243 +203,260 @@ export default function Register() {
     }, [driverCount]);
 
     const selectedPlan = getPlanById(selectedPlanId);
+    const displayPlans = getDisplayPlans();
 
-    const handleRegister = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setError('');
-        setLoading(true);
-
-        // Validation
-        if (selectedPlan) {
-            if (driverCount < selectedPlan.minDrivers) {
-                setError(`${selectedPlan.name}は最低${selectedPlan.minDrivers}名のドライバーが必要です。`);
-                setLoading(false);
-                return;
-            }
-            if (selectedPlan.maxDrivers && driverCount > selectedPlan.maxDrivers) {
-                setError(`${selectedPlan.name}は最大${selectedPlan.maxDrivers}名のドライバーまでです。`);
-                setLoading(false);
-                return;
-            }
-        }
-
-        try {
-            // 1. Register User
-            const regResponse = await fetch('/api/auth/register', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, email, password, user_type: 'admin' }),
-            });
-            const regData = await regResponse.json();
-            if (!regResponse.ok) throw new Error(regData.error || 'Registration failed');
-
-            const token = regData.token;
-            localStorage.setItem('token', token);
-
-            // 2. Create Subscription
-            const subResponse = await fetch('/api/billing/create-subscription', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({
-                    planId: selectedPlanId,
-                    driverCount: driverCount
-                }),
-            });
-            const subData = await subResponse.json();
-            if (!subResponse.ok) throw new Error(subData.error || 'Subscription creation failed');
-
-            setClientSecret(subData.clientSecret);
-            setIntentType(subData.type);
-            setStep(1);
-
-        } catch (err: any) {
-            setError(err.message || 'Registration failed. Please try again.');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const steps = ['プラン選択とアカウント作成', 'お支払い情報の入力'];
+    // Validate form before showing payment
+    const isFormValid = name.trim() !== '' && email.trim() !== '' && password.length >= 6 && agreed;
 
     return (
-        <Container component="main" maxWidth="sm" sx={{ mb: 4 }}>
-            <Paper variant="outlined" sx={{ my: { xs: 3, md: 6 }, p: { xs: 2, md: 3 } }}>
-                <Typography component="h1" variant="h4" align="center">
-                    LogiTrace
-                </Typography>
-                <Stepper activeStep={step} sx={{ pt: 3, pb: 5 }}>
-                    {steps.map((label) => (
-                        <Step key={label}>
-                            <StepLabel>{label}</StepLabel>
-                        </Step>
-                    ))}
-                </Stepper>
+        <div style={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'flex-start',
+            minHeight: '100vh',
+            background: 'linear-gradient(135deg, #e8f5e9 0%, #e3f2fd 100%)',
+            padding: '40px 20px'
+        }}>
+            <div className="card" style={{ width: '100%', maxWidth: '600px' }}>
+                <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+                    <Link to="/" style={{ textDecoration: 'none' }}>
+                        <h1 style={{ color: 'var(--primary-color)', marginBottom: '8px' }}>LogiTrace</h1>
+                    </Link>
+                    <p style={{ color: 'var(--text-secondary)' }}>
+                        アカウント作成 & 14日間無料トライアル開始
+                    </p>
+                </div>
+
                 {error && (
-                    <Alert severity="error" icon={<AlertCircle fontSize="inherit" />} sx={{ mb: 2 }}>
-                        {error}
-                    </Alert>
+                    <div style={{
+                        backgroundColor: '#ffebee',
+                        color: '#c62828',
+                        padding: '12px',
+                        borderRadius: '8px',
+                        marginBottom: '20px',
+                        fontSize: '14px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                    }}>
+                        <AlertCircle size={16} /> {error}
+                    </div>
                 )}
 
-                {step === 0 && (
-                    <Box component="form" onSubmit={handleRegister}>
-                        <Paper variant="outlined" sx={{ p: 3, mb: 3, backgroundColor: '#f8f9fa' }}>
-                            <Typography variant="h6" gutterBottom>
-                                利用するドライバー人数
-                            </Typography>
-                            <Grid container spacing={2} alignItems="center" justifyContent="center">
-                                <Grid>
-                                    <TextField
-                                        type="number"
-                                        InputProps={{ inputProps: { min: 1, max: 30 } }}
-                                        value={driverCount}
-                                        onChange={(e) => setDriverCount(parseInt(e.target.value) || 0)}
-                                        sx={{ width: '100px', textAlign: 'center' }}
-                                    />
-                                </Grid>
-                                <Grid>
-                                    <Typography variant="h6">名</Typography>
-                                </Grid>
-                            </Grid>
-                            {selectedPlan && (
-                                <Box sx={{ mt: 2, pt: 2, borderTop: 1, borderColor: 'divider' }}>
-                                    <Typography variant="body2" color="text.secondary">適用プラン</Typography>
-                                    <Typography variant="h6" color="primary">{selectedPlan.name}</Typography>
-                                    <Typography variant="h5" component="div">
-                                        ¥{selectedPlan.price.toLocaleString()}
-                                        <Typography variant="caption" color="text.secondary">/月</Typography>
-                                    </Typography>
-                                </Box>
-                            )}
-                        </Paper>
-
-                        <Typography variant="h6" gutterBottom>
-                            アカウント情報
-                        </Typography>
-                        <Grid container spacing={2}>
-                            <Grid size={12}>
-                                <TextField
-                                    required
-                                    id="name"
-                                    name="name"
-                                    label="お名前"
-                                    fullWidth
-                                    autoComplete="name"
-                                    value={name}
-                                    onChange={(e) => setName(e.target.value)}
-                                />
-                            </Grid>
-                            <Grid size={12}>
-                                <TextField
-                                    required
-                                    id="email"
-                                    name="email"
-                                    label="メールアドレス"
-                                    fullWidth
-                                    autoComplete="email"
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                />
-                            </Grid>
-                            <Grid size={12}>
-                                <TextField
-                                    required
-                                    id="password"
-                                    name="password"
-                                    label="パスワード"
-                                    type="password"
-                                    fullWidth
-                                    autoComplete="new-password"
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    inputProps={{ minLength: 6 }}
-                                />
-                            </Grid>
-                            <Grid size={12}>
-                                <FormControlLabel
-                                    control={<Checkbox color="primary" required />}
-                                    label={
-                                        <Typography variant="body2">
-                                            <Link to="https://b19.co.jp/terms-of-service/" target="_blank" rel="noreferrer">利用規約</Link>
-                                            と
-                                            <Link to="https://b19.co.jp/privacy-policy/" target="_blank" rel="noreferrer">プライバシーポリシー</Link>
-                                            に同意します
-                                        </Typography>
+                {/* Plan Selection */}
+                <div style={{ marginBottom: '24px' }}>
+                    <label style={{ display: 'block', fontSize: '14px', fontWeight: 'bold', marginBottom: '12px', color: '#555' }}>
+                        プランを選択
+                    </label>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '12px' }}>
+                        {displayPlans.map((plan) => (
+                            <div
+                                key={plan.id}
+                                onClick={() => {
+                                    setSelectedPlanId(plan.id);
+                                    if (driverCount < plan.minDrivers) {
+                                        setDriverCount(plan.minDrivers);
+                                    } else if (plan.maxDrivers && driverCount > plan.maxDrivers) {
+                                        setDriverCount(plan.maxDrivers);
                                     }
-                                />
-                            </Grid>
-                        </Grid>
-                        <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-                            <Button
-                                variant="contained"
-                                type="submit"
-                                sx={{ mt: 3, ml: 1 }}
-                                disabled={loading}
-                                startIcon={<UserPlus />}
+                                }}
+                                style={{
+                                    padding: '16px',
+                                    borderRadius: '12px',
+                                    border: selectedPlanId === plan.id ? '2px solid var(--primary-color)' : '1px solid #ddd',
+                                    backgroundColor: selectedPlanId === plan.id ? '#e3f2fd' : '#fff',
+                                    cursor: 'pointer',
+                                    textAlign: 'center',
+                                    position: 'relative',
+                                    transition: 'all 0.2s ease'
+                                }}
                             >
-                                {loading ? '処理中...' : '次へ進む'}
-                            </Button>
-                        </Box>
-                    </Box>
-                )}
+                                {plan.recommended && (
+                                    <div style={{
+                                        position: 'absolute',
+                                        top: '-8px',
+                                        left: '50%',
+                                        transform: 'translateX(-50%)',
+                                        backgroundColor: 'var(--primary-color)',
+                                        color: '#fff',
+                                        padding: '2px 8px',
+                                        borderRadius: '10px',
+                                        fontSize: '10px',
+                                        fontWeight: 'bold'
+                                    }}>
+                                        人気
+                                    </div>
+                                )}
+                                <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>{plan.name}</div>
+                                <div style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--primary-color)' }}>
+                                    {plan.price > 0 ? `¥${plan.price.toLocaleString()}` : 'お問い合わせ'}
+                                </div>
+                                <div style={{ fontSize: '12px', color: '#666' }}>
+                                    {plan.price > 0 ? '/月' : ''}
+                                </div>
+                                <div style={{ fontSize: '11px', color: '#888', marginTop: '4px' }}>
+                                    {plan.maxDrivers ? `〜${plan.maxDrivers}名` : `${plan.minDrivers}名〜`}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
 
-                {step === 1 && clientSecret && (
-                    <>
-                        <Typography variant="h6" gutterBottom>
-                            クレジットカード情報
-                        </Typography>
+                {/* Driver Count */}
+                <div style={{ marginBottom: '24px', backgroundColor: '#f8f9fa', padding: '16px', borderRadius: '12px' }}>
+                    <label style={{ display: 'block', fontSize: '14px', fontWeight: 'bold', marginBottom: '8px', color: '#555' }}>
+                        ドライバー人数
+                    </label>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <input
+                            type="number"
+                            min={selectedPlan?.minDrivers || 1}
+                            max={selectedPlan?.maxDrivers || 999}
+                            value={driverCount}
+                            onChange={(e) => setDriverCount(parseInt(e.target.value) || 1)}
+                            style={{ width: '80px', textAlign: 'center', fontSize: '18px', padding: '8px' }}
+                        />
+                        <span style={{ fontWeight: 'bold' }}>名</span>
+                        {selectedPlan && (
+                            <span style={{ fontSize: '14px', color: '#666', marginLeft: 'auto' }}>
+                                {selectedPlan.name}: ¥{selectedPlan.price.toLocaleString()}/月
+                            </span>
+                        )}
+                    </div>
+                </div>
 
-                        {/* Trial Period Notice */}
-                        <Paper
-                            sx={{
-                                p: 2,
-                                mb: 3,
-                                backgroundColor: '#e3f2fd',
-                                border: '1px solid #1976d2'
-                            }}
-                        >
-                            <Typography variant="subtitle1" color="primary" fontWeight="bold" gutterBottom>
-                                14日間無料トライアル
-                            </Typography>
-                            <Typography variant="body2" sx={{ mb: 1 }}>
-                                ・ 今日からすべての機能を無料でお試しいただけます
-                            </Typography>
-                            <Typography variant="body2" sx={{ mb: 1 }}>
-                                ・ トライアル期間中はいつでもキャンセル可能（課金なし）
-                            </Typography>
-                            <Typography variant="body2" sx={{ mb: 1 }}>
-                                ・ キャンセルしない場合、14日後に自動的に有料プランへ移行
-                            </Typography>
-                            <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid #1976d2' }}>
-                                <Typography variant="body2" color="text.secondary">
-                                    トライアル終了後の料金:
-                                </Typography>
-                                <Typography variant="h6" color="primary">
-                                    {selectedPlan?.name} ¥{selectedPlan?.price.toLocaleString()}/月
-                                </Typography>
-                            </Box>
-                        </Paper>
+                {/* Account Info */}
+                <div style={{ marginBottom: '24px' }}>
+                    <div style={{ marginBottom: '16px' }}>
+                        <label style={{ display: 'block', fontSize: '14px', fontWeight: 'bold', marginBottom: '6px', color: '#555' }}>
+                            お名前
+                        </label>
+                        <input
+                            type="text"
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            placeholder="山田 太郎"
+                            required
+                            style={{ width: '100%' }}
+                        />
+                    </div>
 
-                        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                            ※ クレジットカード情報は安全に保管され、トライアル終了後の課金に使用されます。<br />
-                            ※ トライアル期間中にダッシュボードからいつでもキャンセルできます。
-                        </Typography>
+                    <div style={{ marginBottom: '16px' }}>
+                        <label style={{ display: 'block', fontSize: '14px', fontWeight: 'bold', marginBottom: '6px', color: '#555' }}>
+                            メールアドレス
+                        </label>
+                        <input
+                            type="email"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            placeholder="admin@company.com"
+                            required
+                            style={{ width: '100%' }}
+                        />
+                    </div>
 
-                        <Elements stripe={stripePromise} options={{ clientSecret }}>
-                            <RegisterForm
-                                intentType={intentType}
-                                onSuccess={() => { alert('登録完了！14日間の無料トライアルが開始されました。'); navigate('/dashboard'); }}
+                    <div style={{ marginBottom: '16px' }}>
+                        <label style={{ display: 'block', fontSize: '14px', fontWeight: 'bold', marginBottom: '6px', color: '#555' }}>
+                            パスワード（6文字以上）
+                        </label>
+                        <input
+                            type="password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            placeholder="••••••••"
+                            required
+                            minLength={6}
+                            style={{ width: '100%' }}
+                        />
+                    </div>
+
+                    <div>
+                        <label style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', fontSize: '14px', color: '#555', cursor: 'pointer' }}>
+                            <input
+                                type="checkbox"
+                                checked={agreed}
+                                onChange={(e) => setAgreed(e.target.checked)}
+                                style={{ marginTop: '4px', width: 'auto' }}
                             />
-                        </Elements>
-                    </>
+                            <span>
+                                <a href="https://b19.co.jp/terms-of-service/" target="_blank" rel="noreferrer" style={{ color: 'var(--primary-color)', fontWeight: 'bold' }}>利用規約</a>
+                                と
+                                <a href="https://b19.co.jp/privacy-policy/" target="_blank" rel="noreferrer" style={{ color: 'var(--primary-color)', fontWeight: 'bold' }}>プライバシーポリシー</a>
+                                に同意します
+                            </span>
+                        </label>
+                    </div>
+                </div>
+
+                {/* Payment Section */}
+                {isFormValid && clientSecret ? (
+                    <Elements stripe={stripePromise} options={{ clientSecret }}>
+                        <RegisterFormWithPayment
+                            selectedPlanId={selectedPlanId}
+                            driverCount={driverCount}
+                            name={name}
+                            email={email}
+                            password={password}
+                            setError={setError}
+                            setLoading={setLoading}
+                        />
+                    </Elements>
+                ) : (
+                    <div>
+                        {!isFormValid && (
+                            <div style={{
+                                backgroundColor: '#fff3e0',
+                                padding: '16px',
+                                borderRadius: '8px',
+                                marginBottom: '16px',
+                                fontSize: '14px',
+                                color: '#e65100'
+                            }}>
+                                すべての項目を入力し、利用規約に同意してください
+                            </div>
+                        )}
+                        {setupIntentLoading && (
+                            <div style={{ textAlign: 'center', padding: '20px', color: '#666' }}>
+                                決済フォームを読み込み中...
+                            </div>
+                        )}
+                        <button
+                            type="button"
+                            className="btn btn-primary"
+                            style={{ width: '100%', padding: '14px', fontSize: '16px', opacity: 0.5 }}
+                            disabled
+                        >
+                            <UserPlus size={20} style={{ marginRight: '8px' }} />
+                            登録してトライアル開始
+                        </button>
+                    </div>
                 )}
 
-                <Typography variant="body2" color="text.secondary" align="center" sx={{ mt: 3 }}>
-                    すでにアカウントをお持ちですか？ <Link to="/login">ログイン</Link>
-                </Typography>
-            </Paper>
-        </Container>
+                {/* Trial Info */}
+                <div style={{
+                    marginTop: '20px',
+                    padding: '16px',
+                    backgroundColor: '#e8f5e9',
+                    borderRadius: '8px',
+                    fontSize: '13px',
+                    color: '#2e7d32'
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                        <CheckCircle size={16} />
+                        <strong>14日間の無料トライアル</strong>
+                    </div>
+                    <ul style={{ margin: 0, paddingLeft: '24px', lineHeight: 1.8 }}>
+                        <li>14日間はすべての機能を無料でご利用いただけます</li>
+                        <li>15日目から選択したプランの料金が自動課金されます</li>
+                        <li>トライアル期間中にいつでもキャンセル可能です</li>
+                        <li>キャンセルは<Link to="/dashboard/settings" style={{ color: '#1565c0', fontWeight: 'bold' }}>ダッシュボード設定</Link>から</li>
+                    </ul>
+                </div>
+
+                <p style={{ marginTop: '24px', fontSize: '14px', color: '#999', textAlign: 'center' }}>
+                    すでにアカウントをお持ちですか？ <Link to="/login" style={{ color: 'var(--primary-color)', fontWeight: 'bold' }}>ログイン</Link>
+                </p>
+            </div>
+        </div>
     );
 }

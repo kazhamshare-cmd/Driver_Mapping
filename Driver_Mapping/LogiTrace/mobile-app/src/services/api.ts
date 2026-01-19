@@ -1,4 +1,4 @@
-import { API_BASE_URL, API_ENDPOINTS } from '../config/api';
+import { API_URL, ENDPOINTS } from '../config/api';
 
 class ApiService {
     private token: string | null = null;
@@ -18,7 +18,7 @@ class ApiService {
 
     async login(email: string, password: string) {
         try {
-            const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.LOGIN}`, {
+            const response = await fetch(`${API_URL}${ENDPOINTS.LOGIN}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -36,7 +36,7 @@ class ApiService {
 
     async createWorkRecord(record: any) {
         try {
-            const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.WORK_RECORDS}`, {
+            const response = await fetch(`${API_URL}${ENDPOINTS.WORK_RECORDS}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -54,7 +54,7 @@ class ApiService {
 
     async updateWorkRecord(id: number, updates: any) {
         try {
-            const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.WORK_RECORDS}/${id}`, {
+            const response = await fetch(`${API_URL}${ENDPOINTS.WORK_RECORDS}/${id}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
